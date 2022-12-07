@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>JwtHelper.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">lib</a> &gt; <a href="index.source.html" class="el_package">uk.gov.di.ipv.cri.passport.library.helpers</a> &gt; <span class="el_source">JwtHelper.java</span></div><h1>JwtHelper.java</h1><pre class="source lang-java linenums">package uk.gov.di.ipv.cri.passport.library.helpers;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.nimbusds.jose.JOSEException;
+import com.nimbusds.jose.JOSEObjectType;
+import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jose.JWSHeader;
+import com.nimbusds.jose.JWSSigner;
+import com.nimbusds.jose.crypto.impl.ECDSA;
+import com.nimbusds.jose.util.Base64URL;
+import com.nimbusds.jwt.JWTClaimsSet;
+import com.nimbusds.jwt.SignedJWT;
+
+import java.util.Map;
+
+import static com.nimbusds.jose.JWSAlgorithm.ES256;
+
+public class JwtHelper {
+
+<span class="fc" id="L21">    private static final ObjectMapper mapper =</span>
+<span class="fc" id="L22">            new ObjectMapper().registerModule(new JavaTimeModule());</span>
+
+    private JwtHelper() {}
+
+    public static &lt;T&gt; SignedJWT createSignedJwtFromClaimSet(
+            JWTClaimsSet claimsSet, JWSSigner signer) throws JOSEException {
+<span class="fc" id="L28">        JWSHeader jwsHeader = generateHeader();</span>
+<span class="fc" id="L29">        SignedJWT signedJWT = new SignedJWT(jwsHeader, claimsSet);</span>
+<span class="fc" id="L30">        signedJWT.sign(signer);</span>
+<span class="fc" id="L31">        return signedJWT;</span>
+    }
+
+    public static SignedJWT transcodeSignature(SignedJWT signedJWT)
+            throws JOSEException, java.text.ParseException {
+<span class="nc" id="L36">        Base64URL transcodedSignatureBase64 =</span>
+<span class="nc" id="L37">                Base64URL.encode(</span>
+<span class="nc" id="L38">                        ECDSA.transcodeSignatureToConcat(</span>
+<span class="nc" id="L39">                                signedJWT.getSignature().decode(),</span>
+<span class="nc" id="L40">                                ECDSA.getSignatureByteArrayLength(ES256)));</span>
+<span class="nc" id="L41">        String[] jwtParts = signedJWT.serialize().split(&quot;\\.&quot;);</span>
+<span class="nc" id="L42">        return SignedJWT.parse(</span>
+<span class="nc" id="L43">                String.format(&quot;%s.%s.%s&quot;, jwtParts[0], jwtParts[1], transcodedSignatureBase64));</span>
+    }
+
+    public static boolean signatureIsDerFormat(SignedJWT signedJWT) throws JOSEException {
+<span class="pc bpc" id="L47" title="1 of 2 branches missed.">        return signedJWT.getSignature().decode().length != ECDSA.getSignatureByteArrayLength(ES256);</span>
+    }
+
+    private static JWSHeader generateHeader() {
+<span class="fc" id="L51">        return new JWSHeader.Builder(JWSAlgorithm.ES256).type(JOSEObjectType.JWT).build();</span>
+    }
+
+    private static &lt;T&gt; JWTClaimsSet generateClaims(T claimInput) {
+<span class="nc" id="L55">        var claimsBuilder = new JWTClaimsSet.Builder();</span>
+
+<span class="nc" id="L57">        mapper.convertValue(claimInput, Map.class)</span>
+<span class="nc" id="L58">                .forEach((key, value) -&gt; claimsBuilder.claim((String) key, value));</span>
+
+<span class="nc" id="L60">        return claimsBuilder.build();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

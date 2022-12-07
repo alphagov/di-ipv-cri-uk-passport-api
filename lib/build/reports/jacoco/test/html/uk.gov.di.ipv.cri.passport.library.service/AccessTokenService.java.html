@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AccessTokenService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">lib</a> &gt; <a href="index.source.html" class="el_package">uk.gov.di.ipv.cri.passport.library.service</a> &gt; <span class="el_source">AccessTokenService.java</span></div><h1>AccessTokenService.java</h1><pre class="source lang-java linenums">package uk.gov.di.ipv.cri.passport.library.service;
+
+import com.nimbusds.oauth2.sdk.AccessTokenResponse;
+import com.nimbusds.oauth2.sdk.AuthorizationGrant;
+import com.nimbusds.oauth2.sdk.ErrorObject;
+import com.nimbusds.oauth2.sdk.GrantType;
+import com.nimbusds.oauth2.sdk.OAuth2Error;
+import com.nimbusds.oauth2.sdk.Scope;
+import com.nimbusds.oauth2.sdk.TokenResponse;
+import com.nimbusds.oauth2.sdk.token.AccessToken;
+import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
+import com.nimbusds.oauth2.sdk.token.Tokens;
+import com.nimbusds.oauth2.sdk.util.StringUtils;
+import org.apache.commons.codec.digest.DigestUtils;
+import uk.gov.di.ipv.cri.passport.library.annotations.ExcludeFromGeneratedCoverageReport;
+import uk.gov.di.ipv.cri.passport.library.config.ConfigurationService;
+import uk.gov.di.ipv.cri.passport.library.helpers.LogHelper;
+import uk.gov.di.ipv.cri.passport.library.persistence.DataStore;
+import uk.gov.di.ipv.cri.passport.library.persistence.item.AccessTokenItem;
+import uk.gov.di.ipv.cri.passport.library.validation.ValidationResult;
+
+import java.time.Instant;
+import java.util.Objects;
+
+import static uk.gov.di.ipv.cri.passport.library.config.EnvironmentVariable.CRI_PASSPORT_ACCESS_TOKENS_TABLE_NAME;
+
+public class AccessTokenService {
+<span class="fc" id="L28">    protected static final Scope DEFAULT_SCOPE = new Scope(&quot;user-credentials&quot;);</span>
+    private final DataStore&lt;AccessTokenItem&gt; dataStore;
+    private final ConfigurationService configurationService;
+
+    @ExcludeFromGeneratedCoverageReport
+    public AccessTokenService(ConfigurationService configurationService) {
+        this.configurationService = configurationService;
+        this.dataStore =
+                new DataStore&lt;&gt;(
+                        this.configurationService.getEnvironmentVariable(
+                                CRI_PASSPORT_ACCESS_TOKENS_TABLE_NAME),
+                        AccessTokenItem.class,
+                        DataStore.getClient(
+                                this.configurationService.getDynamoDbEndpointOverride()),
+                        this.configurationService);
+    }
+
+    public AccessTokenService(
+<span class="fc" id="L46">            DataStore&lt;AccessTokenItem&gt; dataStore, ConfigurationService configurationService) {</span>
+<span class="fc" id="L47">        this.dataStore = dataStore;</span>
+<span class="fc" id="L48">        this.configurationService = configurationService;</span>
+<span class="fc" id="L49">    }</span>
+
+    public TokenResponse generateAccessToken() {
+<span class="fc" id="L52">        AccessToken accessToken =</span>
+                new BearerAccessToken(
+<span class="fc" id="L54">                        configurationService.getAccessTokenExpirySeconds(), DEFAULT_SCOPE);</span>
+<span class="fc" id="L55">        return new AccessTokenResponse(new Tokens(accessToken, null));</span>
+    }
+
+    public ValidationResult&lt;ErrorObject&gt; validateAuthorizationGrant(AuthorizationGrant authGrant) {
+<span class="pc bpc" id="L59" title="1 of 2 branches missed.">        if (!authGrant.getType().equals(GrantType.AUTHORIZATION_CODE)) {</span>
+<span class="fc" id="L60">            return new ValidationResult&lt;&gt;(false, OAuth2Error.UNSUPPORTED_GRANT_TYPE);</span>
+        }
+<span class="nc" id="L62">        return ValidationResult.createValidResult();</span>
+    }
+
+    public AccessTokenItem getAccessTokenItem(String accessToken) {
+<span class="fc" id="L66">        AccessTokenItem accessTokenItem = dataStore.getItem(DigestUtils.sha256Hex(accessToken));</span>
+<span class="fc bfc" id="L67" title="All 2 branches covered.">        if (accessTokenItem != null) {</span>
+<span class="fc" id="L68">            LogHelper.attachPassportSessionIdToLogs(accessTokenItem.getPassportSessionId());</span>
+        }
+<span class="fc" id="L70">        return accessTokenItem;</span>
+    }
+
+    public void persistAccessToken(
+            AccessTokenResponse tokenResponse, String resourceId, String passportSessionId) {
+<span class="fc" id="L75">        BearerAccessToken accessToken = tokenResponse.getTokens().getBearerAccessToken();</span>
+<span class="fc" id="L76">        dataStore.create(</span>
+                new AccessTokenItem(
+<span class="fc" id="L78">                        DigestUtils.sha256Hex(accessToken.getValue()),</span>
+                        resourceId,
+<span class="fc" id="L80">                        toExpiryDateTime(accessToken.getLifetime()),</span>
+                        passportSessionId));
+<span class="fc" id="L82">    }</span>
+
+    public void revokeAccessToken(String accessToken) throws IllegalArgumentException {
+<span class="fc" id="L85">        AccessTokenItem accessTokenItem = dataStore.getItem(accessToken);</span>
+
+<span class="fc bfc" id="L87" title="All 2 branches covered.">        if (Objects.nonNull(accessTokenItem)) {</span>
+<span class="fc bfc" id="L88" title="All 2 branches covered.">            if (StringUtils.isBlank(accessTokenItem.getRevokedAtDateTime())) {</span>
+<span class="fc" id="L89">                accessTokenItem.setRevokedAtDateTime(Instant.now().toString());</span>
+<span class="fc" id="L90">                dataStore.update(accessTokenItem);</span>
+            }
+        } else {
+<span class="fc" id="L93">            throw new IllegalArgumentException(</span>
+                    &quot;Failed to revoke access token - access token could not be found in DynamoDB&quot;);
+        }
+<span class="fc" id="L96">    }</span>
+
+    private String toExpiryDateTime(long expirySeconds) {
+<span class="fc" id="L99">        return Instant.now().plusSeconds(expirySeconds).toString();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

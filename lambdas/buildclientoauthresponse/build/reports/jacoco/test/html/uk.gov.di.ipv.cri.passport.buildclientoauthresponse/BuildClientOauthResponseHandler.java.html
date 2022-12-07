@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>BuildClientOauthResponseHandler.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">buildclientoauthresponse</a> &gt; <a href="index.source.html" class="el_package">uk.gov.di.ipv.cri.passport.buildclientoauthresponse</a> &gt; <span class="el_source">BuildClientOauthResponseHandler.java</span></div><h1>BuildClientOauthResponseHandler.java</h1><pre class="source lang-java linenums"><span class="fc" id="L1">package uk.gov.di.ipv.cri.passport.buildclientoauthresponse;</span>
+
+import com.amazonaws.services.lambda.runtime.Context;
+import com.amazonaws.services.lambda.runtime.RequestHandler;
+import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
+import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.nimbusds.oauth2.sdk.AuthorizationCode;
+import com.nimbusds.oauth2.sdk.ErrorObject;
+import com.nimbusds.oauth2.sdk.OAuth2Error;
+import com.nimbusds.oauth2.sdk.util.StringUtils;
+import org.apache.http.HttpStatus;
+import org.apache.http.client.utils.URIBuilder;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import software.amazon.lambda.powertools.logging.CorrelationIdPathConstants;
+import software.amazon.lambda.powertools.logging.Logging;
+import software.amazon.lambda.powertools.metrics.Metrics;
+import uk.gov.di.ipv.cri.common.library.util.EventProbe;
+import uk.gov.di.ipv.cri.passport.buildclientoauthresponse.domain.ClientDetails;
+import uk.gov.di.ipv.cri.passport.buildclientoauthresponse.domain.ClientResponse;
+import uk.gov.di.ipv.cri.passport.library.auditing.AuditEventTypes;
+import uk.gov.di.ipv.cri.passport.library.auditing.AuditEventUser;
+import uk.gov.di.ipv.cri.passport.library.config.ConfigurationService;
+import uk.gov.di.ipv.cri.passport.library.exceptions.HttpResponseExceptionWithErrorBody;
+import uk.gov.di.ipv.cri.passport.library.exceptions.SqsException;
+import uk.gov.di.ipv.cri.passport.library.helpers.ApiGatewayResponseGenerator;
+import uk.gov.di.ipv.cri.passport.library.helpers.LogHelper;
+import uk.gov.di.ipv.cri.passport.library.helpers.RequestHelper;
+import uk.gov.di.ipv.cri.passport.library.persistence.item.PassportSessionItem;
+import uk.gov.di.ipv.cri.passport.library.service.AuditService;
+import uk.gov.di.ipv.cri.passport.library.service.AuthorizationCodeService;
+import uk.gov.di.ipv.cri.passport.library.service.PassportSessionService;
+
+import java.net.URISyntaxException;
+
+import static uk.gov.di.ipv.cri.passport.library.metrics.Definitions.LAMBDA_BUILD_CLIENT_OAUTH_RESPONSE_COMPLETED_ERROR;
+import static uk.gov.di.ipv.cri.passport.library.metrics.Definitions.LAMBDA_BUILD_CLIENT_OAUTH_RESPONSE_COMPLETED_OK;
+
+public class BuildClientOauthResponseHandler
+        implements RequestHandler&lt;APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent&gt; {
+<span class="fc" id="L41">    private static final Logger LOGGER = LogManager.getLogger();</span>
+
+    private final AuthorizationCodeService authorizationCodeService;
+    private final PassportSessionService passportSessionService;
+    private final AuditService auditService;
+    private final ConfigurationService configurationService;
+    private final EventProbe eventProbe;
+
+    public BuildClientOauthResponseHandler(
+            AuthorizationCodeService authorizationCodeService,
+            PassportSessionService passportSessionService,
+            AuditService auditService,
+            ConfigurationService configurationService,
+<span class="fc" id="L54">            EventProbe eventProbe) {</span>
+<span class="fc" id="L55">        this.authorizationCodeService = authorizationCodeService;</span>
+<span class="fc" id="L56">        this.passportSessionService = passportSessionService;</span>
+<span class="fc" id="L57">        this.auditService = auditService;</span>
+<span class="fc" id="L58">        this.configurationService = configurationService;</span>
+<span class="fc" id="L59">        this.eventProbe = eventProbe;</span>
+<span class="fc" id="L60">    }</span>
+
+<span class="nc" id="L62">    public BuildClientOauthResponseHandler() {</span>
+<span class="nc" id="L63">        this.configurationService = new ConfigurationService();</span>
+<span class="nc" id="L64">        this.authorizationCodeService = new AuthorizationCodeService(configurationService);</span>
+<span class="nc" id="L65">        this.passportSessionService = new PassportSessionService(configurationService);</span>
+<span class="nc" id="L66">        this.auditService =</span>
+<span class="nc" id="L67">                new AuditService(AuditService.getDefaultSqsClient(), configurationService);</span>
+<span class="nc" id="L68">        this.eventProbe = new EventProbe();</span>
+<span class="nc" id="L69">    }</span>
+
+    @Override
+    @Logging(clearState = true, correlationIdPath = CorrelationIdPathConstants.API_GATEWAY_REST)
+    @Metrics(captureColdStart = true)
+    public APIGatewayProxyResponseEvent handleRequest(
+            APIGatewayProxyRequestEvent input, Context context) {
+<span class="pc bfc" id="L76" title="All 2 branches covered.">        LogHelper.attachComponentIdToLogs();</span>
+
+        try {
+            String passportSessionId = RequestHelper.getPassportSessionId(input);
+
+            PassportSessionItem passportSessionItem =
+                    passportSessionService.getPassportSession(passportSessionId);
+            AuditEventUser auditEventUser =
+                    AuditEventUser.fromPassportSessionItem(passportSessionItem);
+
+            LogHelper.attachGovukSigninJourneyIdToLogs(
+                    passportSessionItem.getGovukSigninJourneyId());
+
+            if (passportSessionItem.getAttemptCount() == 0) {
+                LOGGER.info(
+                        &quot;No passport details attempt has been made - returning Access Denied response&quot;);
+
+                ClientResponse clientResponse = generateClientErrorResponse(passportSessionItem);
+
+                auditService.sendAuditEvent(AuditEventTypes.IPV_PASSPORT_CRI_END, auditEventUser);
+
+                eventProbe.counterMetric(LAMBDA_BUILD_CLIENT_OAUTH_RESPONSE_COMPLETED_ERROR);
+
+                return ApiGatewayResponseGenerator.proxyJsonResponse(
+                        HttpStatus.SC_OK, clientResponse);
+            }
+
+            AuthorizationCode authorizationCode =
+                    authorizationCodeService.generateAuthorizationCode();
+
+            authorizationCodeService.persistAuthorizationCode(
+                    authorizationCode.getValue(), passportSessionId);
+
+            ClientResponse clientResponse =
+                    generateClientSuccessResponse(
+                            passportSessionItem, authorizationCode.getValue());
+
+            auditService.sendAuditEvent(AuditEventTypes.IPV_PASSPORT_CRI_END, auditEventUser);
+
+            eventProbe.counterMetric(LAMBDA_BUILD_CLIENT_OAUTH_RESPONSE_COMPLETED_OK);
+
+            return ApiGatewayResponseGenerator.proxyJsonResponse(HttpStatus.SC_OK, clientResponse);
+        } catch (HttpResponseExceptionWithErrorBody e) {
+            eventProbe.counterMetric(LAMBDA_BUILD_CLIENT_OAUTH_RESPONSE_COMPLETED_ERROR);
+            return ApiGatewayResponseGenerator.proxyJsonResponse(
+                    e.getStatusCode(), e.getErrorResponse());
+        } catch (URISyntaxException e) {
+            LOGGER.error(&quot;Failed to construct redirect uri because: {}&quot;, e.getMessage());
+            eventProbe.counterMetric(LAMBDA_BUILD_CLIENT_OAUTH_RESPONSE_COMPLETED_ERROR);
+            return ApiGatewayResponseGenerator.proxyJsonResponse(
+                    HttpStatus.SC_INTERNAL_SERVER_ERROR, e.getMessage());
+        } catch (SqsException e) {
+            ErrorObject error = OAuth2Error.SERVER_ERROR.setDescription(e.getMessage());
+
+            LogHelper.logOauthError(
+                    &quot;Failed to send message to aws SQS audit event queue&quot;,
+                    error.getCode(),
+                    error.getDescription());
+
+            eventProbe.counterMetric(LAMBDA_BUILD_CLIENT_OAUTH_RESPONSE_COMPLETED_ERROR);
+            return ApiGatewayResponseGenerator.proxyJsonResponse(
+                    HttpStatus.SC_BAD_REQUEST, error.toJSONObject());
+        }
+    }
+
+    private ClientResponse generateClientSuccessResponse(
+            PassportSessionItem passportSessionItem, String authorizationCode)
+            throws URISyntaxException {
+<span class="fc" id="L144">        URIBuilder redirectUri =</span>
+<span class="fc" id="L145">                new URIBuilder(passportSessionItem.getAuthParams().getRedirectUri())</span>
+<span class="fc" id="L146">                        .addParameter(&quot;code&quot;, authorizationCode);</span>
+
+<span class="fc bfc" id="L148" title="All 2 branches covered.">        if (StringUtils.isNotBlank(passportSessionItem.getAuthParams().getState())) {</span>
+<span class="fc" id="L149">            redirectUri.addParameter(&quot;state&quot;, passportSessionItem.getAuthParams().getState());</span>
+        }
+
+<span class="fc" id="L152">        return new ClientResponse(new ClientDetails(redirectUri.build().toString()));</span>
+    }
+
+    private ClientResponse generateClientErrorResponse(PassportSessionItem passportSessionItem)
+            throws URISyntaxException {
+<span class="fc" id="L157">        URIBuilder redirectUri =</span>
+<span class="fc" id="L158">                new URIBuilder(passportSessionItem.getAuthParams().getRedirectUri())</span>
+<span class="fc" id="L159">                        .addParameter(&quot;error&quot;, OAuth2Error.ACCESS_DENIED.getCode())</span>
+<span class="fc" id="L160">                        .addParameter(</span>
+<span class="fc" id="L161">                                &quot;error_description&quot;, OAuth2Error.ACCESS_DENIED.getDescription());</span>
+<span class="pc bpc" id="L162" title="1 of 2 branches missed.">        if (StringUtils.isNotBlank(passportSessionItem.getAuthParams().getState())) {</span>
+<span class="fc" id="L163">            redirectUri.addParameter(&quot;state&quot;, passportSessionItem.getAuthParams().getState());</span>
+        }
+
+<span class="fc" id="L166">        return new ClientResponse(new ClientDetails(redirectUri.build().toString()));</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

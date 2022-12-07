@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ApiGatewayResponseGenerator.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">lib</a> &gt; <a href="index.source.html" class="el_package">uk.gov.di.ipv.cri.passport.library.helpers</a> &gt; <span class="el_source">ApiGatewayResponseGenerator.java</span></div><h1>ApiGatewayResponseGenerator.java</h1><pre class="source lang-java linenums">package uk.gov.di.ipv.cri.passport.library.helpers;
+
+import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import org.apache.http.HttpHeaders;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.Collections;
+import java.util.Map;
+
+public class ApiGatewayResponseGenerator {
+
+    private static final String JSON_CONTENT_TYPE_VALUE = &quot;application/json&quot;;
+<span class="nc" id="L17">    private static final ObjectMapper objectMapper =</span>
+<span class="nc" id="L18">            new ObjectMapper().registerModule(new JavaTimeModule());</span>
+<span class="nc" id="L19">    private static final Logger LOGGER = LoggerFactory.getLogger(ApiGatewayResponseGenerator.class);</span>
+
+    private ApiGatewayResponseGenerator() {}
+
+    public static APIGatewayProxyResponseEvent proxyJwtResponse(int statusCode, String payload) {
+<span class="nc" id="L24">        Map&lt;String, String&gt; responseHeaders = Map.of(HttpHeaders.CONTENT_TYPE, &quot;application/jwt&quot;);</span>
+<span class="nc" id="L25">        return proxyResponse(statusCode, payload, responseHeaders);</span>
+    }
+
+    public static &lt;T&gt; APIGatewayProxyResponseEvent proxyJsonResponse(int statusCode, T body) {
+<span class="nc" id="L29">        Map&lt;String, String&gt; responseHeaders =</span>
+<span class="nc" id="L30">                Map.of(HttpHeaders.CONTENT_TYPE, JSON_CONTENT_TYPE_VALUE);</span>
+
+        try {
+<span class="nc" id="L33">            return proxyResponse(statusCode, generateResponseBody(body), responseHeaders);</span>
+<span class="nc" id="L34">        } catch (JsonProcessingException e) {</span>
+<span class="nc" id="L35">            LOGGER.error(&quot;Unable to generateApiGatewayProxyErrorResponse&quot;, e);</span>
+<span class="nc" id="L36">            return proxyResponse(500, &quot;Internal server error&quot;, Collections.emptyMap());</span>
+        }
+    }
+
+    public static APIGatewayProxyResponseEvent proxyResponse(
+            int statusCode, String body, Map&lt;String, String&gt; headers) {
+<span class="nc" id="L42">        APIGatewayProxyResponseEvent apiGatewayProxyResponseEvent =</span>
+                new APIGatewayProxyResponseEvent();
+<span class="nc" id="L44">        apiGatewayProxyResponseEvent.setHeaders(headers);</span>
+<span class="nc" id="L45">        apiGatewayProxyResponseEvent.setStatusCode(statusCode);</span>
+<span class="nc" id="L46">        apiGatewayProxyResponseEvent.setBody(body);</span>
+
+<span class="nc" id="L48">        return apiGatewayProxyResponseEvent;</span>
+    }
+
+    private static &lt;T&gt; String generateResponseBody(T body) throws JsonProcessingException {
+<span class="nc" id="L52">        return objectMapper.writeValueAsString(body);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.gov.di.ipv.cri.passport.library.helpers.KmsSignerTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2022-12-01T12:17:02" hostname="UK-WXY6WYG4WJ" time="0.656">
+  <properties/>
+  <testcase name="shouldSignJWSObject()" classname="uk.gov.di.ipv.cri.passport.library.helpers.KmsSignerTest" time="0.652"/>
+  <testcase name="base64UrlSignatureShouldNotIncludePadding()" classname="uk.gov.di.ipv.cri.passport.library.helpers.KmsSignerTest" time="0.003"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

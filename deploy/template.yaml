@@ -1,0 +1,967 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: ipv-cri-uk-passport-back
+
+Globals:
+  Function:
+    Timeout: 40
+    Environment:
+      Variables:
+        JAVA_TOOL_OPTIONS: -XX:+TieredCompilation -XX:TieredStopAtLevel=1
+        POWERTOOLS_LOG_LEVEL: INFO
+        POWERTOOLS_METRICS_NAMESPACE: !Ref CriIdentifier
+    CodeSigningConfigArn: !If
+      - UseCodeSigning
+      - !Ref CodeSigningConfigArn
+      - !Ref AWS::NoValue
+    PermissionsBoundary: !If
+      - UsePermissionsBoundary
+      - !Ref PermissionsBoundary
+      - !Ref AWS::NoValue
+
+Parameters:
+  Environment:
+    AllowedValues:
+      - development-a
+      - development-b
+      - development-c
+      - build
+      - staging
+      - integration
+      - production
+    Type: String
+  VpcStackName:
+    Description: >
+      The name of the stack that defines the VPC in which this container will
+      run.
+    Type: String
+  CodeSigningConfigArn:
+    Type: String
+    Description: >
+      The ARN of the Code Signing Config to use, provided by the deployment pipeline
+    Default: "none"
+  PermissionsBoundary:
+    Type: String
+    Description: >
+      The ARN of the permissions boundary to apply to any role created by the template
+    Default: "none"
+# When common stack support is added CriIdentifier should be pointed to passport SSM Param /common-cri-parameters/CriIdentifier
+  CriIdentifier:
+    Type: String
+    Default: "di-ipv-cri-uk-passport-api"
+
+Mappings:
+  EnvironmentConfiguration:
+    development-a:
+      provisionedConcurrency: 0
+    development-b:
+      provisionedConcurrency: 0
+    development-c:
+      provisionedConcurrency: 0
+    build:
+      provisionedConcurrency: 0
+    staging:
+      provisionedConcurrency: 1
+    integration:
+      provisionedConcurrency: 1
+    production:
+      provisionedConcurrency: 1
+
+  MaxVCJwtTtlMapping:
+    Environment:
+      dev: "6"
+      build: "6"
+      staging: "6"
+      integration: "6"
+      production: "2"
+
+  # Permitted values: SECONDS,MINUTES,HOURS,DAYS,MONTHS,YEARS
+  JwtTtlUnitMapping:
+    Environment:
+      dev: MONTHS
+      build: MONTHS
+      staging: MONTHS
+      integration: MONTHS
+      production: HOURS
+
+Conditions:
+  AddProvisionedConcurrency: !Not
+    - !Equals
+      - !FindInMap [ EnvironmentConfiguration, !Ref Environment, provisionedConcurrency ]
+      -  0
+
+  IsDevelopmentEnvironment: !Not
+    - !Or
+      - !Equals [ !Ref Environment, "build"]
+      - !Equals [ !Ref Environment, "staging"]
+      - !Equals [ !Ref Environment, "integration"]
+      - !Equals [ !Ref Environment, "production"]
+
+  IsNotDevelopmentEnvironment: !Not
+    - Condition: IsDevelopmentEnvironment
+
+  UseCodeSigning:
+    Fn::Not:
+      - Fn::Equals:
+          - !Ref CodeSigningConfigArn
+          - "none"
+
+  UsePermissionsBoundary:
+    Fn::Not:
+      - Fn::Equals:
+          - !Ref PermissionsBoundary
+          - "none"
+  IsProdEnvironment: !Equals
+    - !Ref Environment
+    - production
+
+Resources:
+  IPVCriUKPassportPrivateAPI:
+    Type: AWS::Serverless::Api
+    Properties:
+      # checkov:skip=CKV_AWS_120: We are not implementing API Gateway caching at the time.
+      Name: !Sub IPV Passport Back Private API Gateway ${Environment}
+      Description: Private Passport CRI API with metrics
+      EndpointConfiguration:
+        Type: PRIVATE
+      Auth:
+        ResourcePolicy:
+          CustomStatements:
+            - Action: 'execute-api:Invoke'
+              Effect: Allow
+              Principal: '*'
+              Resource:
+                - 'execute-api:/*'
+            - Action: 'execute-api:Invoke'
+              Effect: Deny
+              Principal: '*'
+              Resource:
+                - 'execute-api:/*'
+              Condition:
+                StringNotEquals:
+                  'aws:SourceVpce': !If
+                    - IsDevelopmentEnvironment
+                    - !ImportValue "networking-shared-development-ApiGatewayVpcEndpointId"
+                    - Fn::ImportValue:
+                        !Sub "${VpcStackName}-ApiGatewayVpcEndpointId"
+      StageName: !Sub ${Environment}
+      TracingEnabled: true
+      MethodSettings:
+        - LoggingLevel: INFO
+          ResourcePath: '/*'
+          HttpMethod: '*'
+          # Disable data trace in production to avoid logging customer sensitive information
+          DataTraceEnabled: !If [ IsProdEnvironment, false, true ]
+          MetricsEnabled: true
+          ThrottlingRateLimit: 5
+          ThrottlingBurstLimit: 10
+      AccessLogSetting:
+        DestinationArn: !GetAtt IPVCriUKPassportPrivateAPILogGroup.Arn
+        Format: >-
+          {
+          "requestId":"$context.requestId",
+          "ip":"$context.identity.sourceIp",
+          "requestTime":"$context.requestTime",
+          "httpMethod":"$context.httpMethod",
+          "path":"$context.path",
+          "routeKey":"$context.routeKey",
+          "status":"$context.status",
+          "protocol":"$context.protocol",
+          "responseLatency":"$context.responseLatency",
+          "responseLength":"$context.responseLength"
+          }
+
+  IPVCriUKPassportPrivateAPILogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/apigateway/${AWS::StackName}-PassportBackPrivate-API-GW-AccessLogs
+      RetentionInDays: 14
+      KmsKeyId: !GetAtt LoggingKmsKey.Arn
+
+  IPVCriUKPassportPrivateAPILogGroupSubscriptionFilterCSLS:
+    Type: AWS::Logs::SubscriptionFilter
+    Condition: IsNotDevelopmentEnvironment
+    Properties:
+      DestinationArn: "arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prodpython"
+      FilterPattern: ""
+      LogGroupName: !Ref IPVCriUKPassportPrivateAPILogGroup
+
+  IPVCriUKPassportAPI:
+    Type: AWS::Serverless::Api
+    Properties:
+      # checkov:skip=CKV_AWS_120: We are not implementing API Gateway caching at the time.
+      Name: !Sub IPV CRI UK Passport API Gateway ${Environment}
+      Description: Public Passport CRI API with metrics
+      StageName: !Sub ${Environment}
+      TracingEnabled: true
+      Auth:
+        ApiKeyRequired: true
+        UsagePlan:
+          CreateUsagePlan: PER_API
+      MethodSettings:
+        - LoggingLevel: INFO
+          ResourcePath: '/*'
+          HttpMethod: '*'
+          # Disable data trace in production to avoid logging customer sensitive information
+          DataTraceEnabled: !If [ IsProdEnvironment, false, true ]
+          MetricsEnabled: true
+          ThrottlingRateLimit: 5
+          ThrottlingBurstLimit: 10
+      AccessLogSetting:
+        DestinationArn: !GetAtt IPVCriUKPassportAPILogGroup.Arn
+        Format: >-
+          {
+          "requestId":"$context.requestId",
+          "ip":"$context.identity.sourceIp",
+          "requestTime":"$context.requestTime",
+          "httpMethod":"$context.httpMethod",
+          "path":"$context.path",
+          "routeKey":"$context.routeKey",
+          "status":"$context.status",
+          "protocol":"$context.protocol",
+          "responseLatency":"$context.responseLatency",
+          "responseLength":"$context.responseLength"
+          }
+
+  IPVCriUKPassportAPILogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/apigateway/${AWS::StackName}-CriPassport-API-GW-AccessLogs
+      RetentionInDays: 14
+      KmsKeyId: !GetAtt LoggingKmsKey.Arn
+
+  IPVCriUKPassportAPILogGroupSubscriptionFilterCSLS:
+    Type: AWS::Logs::SubscriptionFilter
+    Condition: IsNotDevelopmentEnvironment
+    Properties:
+      DestinationArn: "arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prodpython"
+      FilterPattern: ""
+      LogGroupName: !Ref IPVCriUKPassportAPILogGroup
+
+  IPVCriUKPassportIssueCredentialFunction:
+    Type: AWS::Serverless::Function
+    DependsOn:
+      - "IPVCriUKPassportIssueCredentialFunctionLogGroup"
+    Properties:
+      # checkov:skip=CKV_AWS_115: We do not have enough data to allocate the concurrent execution allowance per function.
+      # checkov:skip=CKV_AWS_116: Lambdas invoked via API Gateway do not support Dead Letter Queues.
+      # checkov:skip=CKV_AWS_117: Lambdas will migrate to our own VPC in future work.
+      FunctionName: !Sub "ipv-passport-issue-credential-${Environment}"
+      Handler: uk.gov.di.ipv.cri.passport.issuecredential.IssueCredentialHandler::handleRequest
+      Runtime: java11
+      PackageType: Zip
+      CodeUri: ../lambdas/issuecredential
+      Architectures:
+        - arm64
+      MemorySize: 2048
+      Environment:
+        # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
+        Variables:
+          POWERTOOLS_SERVICE_NAME: !Sub "${CriIdentifier}-issuecredential"
+          ENVIRONMENT: !Sub "${Environment}"
+          DCS_RESPONSE_TABLE_NAME: !Select [1, !Split ['/', !GetAtt DCSResponseTable.Arn]]
+          CRI_PASSPORT_ACCESS_TOKENS_TABLE_NAME: !Select [1, !Split ['/', !GetAtt CRIPassportAccessTokensTable.Arn]]
+          SQS_AUDIT_EVENT_QUEUE_URL: !ImportValue AuditEventQueueUrl
+          CREDENTIAL_ISSUERS_CONFIG_PARAM_PREFIX: !Sub "/${Environment}/credentialIssuers/ukPassport/clients"
+          PASSPORT_BACK_SESSIONS_TABLE_NAME: !Ref CRIPassportBackSessionsTable
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref DCSResponseTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref CRIPassportAccessTokensTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref CRIPassportBackSessionsTable
+        - SSMParameterReadPolicy:
+            ParameterName: !Sub ${Environment}/credentialIssuers/ukPassport/self/verifiableCredentialKmsSigningKeyId
+        - SSMParameterReadPolicy:
+            ParameterName: !Sub ${Environment}/credentialIssuers/ukPassport/self/verifiableCredentialIssuer
+        - SSMParameterReadPolicy:
+            ParameterName: !Sub ${Environment}/credentialIssuers/ukPassport/self/maxJwtTtl
+        - SSMParameterReadPolicy:
+            ParameterName: !Sub ${Environment}/credentialIssuers/ukPassport/self/MaxVCJwtTtlMapping
+        - SSMParameterReadPolicy:
+            ParameterName: !Sub ${Environment}/credentialIssuers/ukPassport/self/JwtTtlUnit
+        - SSMParameterReadPolicy:
+            ParameterName: !Sub ${Environment}/credentialIssuers/ukPassport/self/backendSessionTtl
+        - SSMParameterReadPolicy:
+            ParameterName: !Sub ${Environment}/credentialIssuers/ukPassport/clients/*
+        - SQSSendMessagePolicy:
+            QueueName: !ImportValue AuditEventQueueName
+        - Statement:
+            - Sid: kmsSigningKeyPermission
+              Effect: Allow
+              Action:
+                - 'kms:sign'
+              Resource:
+                - !ImportValue PassportCriVcSigningKeyArn
+            - Sid: auditEventQueueKmsEncryptionKeyPermission
+              Effect: Allow
+              Action:
+                - 'kms:Decrypt'
+                - 'kms:GenerateDataKey'
+              Resource:
+                - !ImportValue AuditEventQueueEncryptionKeyArn
+      Events:
+        IPVCriUKPassportAPI:
+          Type: Api
+          Properties:
+            RestApiId: !Ref IPVCriUKPassportAPI
+            Path: /credentials/issue
+            Method: POST
+      AutoPublishAlias: live
+      ProvisionedConcurrencyConfig:
+        !If
+          - AddProvisionedConcurrency
+          - ProvisionedConcurrentExecutions: !FindInMap [ EnvironmentConfiguration, !Ref Environment, provisionedConcurrency ]
+          - !Ref AWS::NoValue
+
+  IPVCriUKPassportIssueCredentialFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      RetentionInDays: 14
+      LogGroupName: !Sub "/aws/lambda/ipv-passport-issue-credential-${Environment}"
+      KmsKeyId: !GetAtt LoggingKmsKey.Arn
+
+  IPVCriUKPassportIssueCredentialFunctionLogGroupSubscriptionFilterCSLS:
+    Type: AWS::Logs::SubscriptionFilter
+    Condition: IsNotDevelopmentEnvironment
+    Properties:
+      DestinationArn: "arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prodpython"
+      FilterPattern: ""
+      LogGroupName: !Ref IPVCriUKPassportIssueCredentialFunctionLogGroup
+
+  IPVCriUKPassportAccessTokenFunction:
+    Type: AWS::Serverless::Function
+    DependsOn:
+      - "IPVCriUKPassportAccessTokenFunctionLogGroup"
+    Properties:
+      # checkov:skip=CKV_AWS_115: We do not have enough data to allocate the concurrent execution allowance per function.
+      # checkov:skip=CKV_AWS_116: Lambdas invoked via API Gateway do not support Dead Letter Queues.
+      # checkov:skip=CKV_AWS_117: Lambdas will migrate to our own VPC in future work.
+      FunctionName: !Sub "ipv-passport-token-${Environment}"
+      Handler: uk.gov.di.ipv.cri.passport.accesstoken.AccessTokenHandler::handleRequest
+      Runtime: java11
+      PackageType: Zip
+      CodeUri: ../lambdas/accesstoken
+      Architectures:
+        - arm64
+      MemorySize: 2048
+      Environment:
+        # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
+        Variables:
+          POWERTOOLS_SERVICE_NAME: !Sub "${CriIdentifier}-accesstoken"
+          ENVIRONMENT: !Sub "${Environment}"
+          CRI_PASSPORT_AUTH_CODES_TABLE_NAME: !Select [1, !Split ['/', !GetAtt CRIPassportAuthCodesTable.Arn]]
+          CRI_PASSPORT_ACCESS_TOKENS_TABLE_NAME: !Select [1, !Split ['/', !GetAtt CRIPassportAccessTokensTable.Arn]]
+          CRI_PASSPORT_CLIENT_AUTH_JWT_IDS_TABLE_NAME: !Ref CRIPassportClientAuthJwtIdsTable
+          CREDENTIAL_ISSUERS_CONFIG_PARAM_PREFIX: !Sub "/${Environment}/credentialIssuers/ukPassport/clients"
+          PASSPORT_CRI_CLIENT_AUTH_MAX_TTL: !Sub "/${Environment}/credentialIssuers/ukPassport/self/maxJwtTtl"
+          PASSPORT_CRI_CLIENT_AUDIENCE: !Sub "/${Environment}/credentialIssuers/ukPassport/self/audienceForClients"
+          PASSPORT_BACK_SESSIONS_TABLE_NAME: !Ref CRIPassportBackSessionsTable
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref CRIPassportAuthCodesTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref CRIPassportAccessTokensTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref CRIPassportClientAuthJwtIdsTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref CRIPassportBackSessionsTable
+        - SSMParameterReadPolicy:
+            ParameterName: !Sub ${Environment}/credentialIssuers/ukPassport/self/audienceForClients
+        - SSMParameterReadPolicy:
+            ParameterName: !Sub ${Environment}/credentialIssuers/ukPassport/self/maxJwtTtl
+        - SSMParameterReadPolicy:
+            ParameterName: !Sub ${Environment}/credentialIssuers/ukPassport/self/backendSessionTtl
+        - SSMParameterReadPolicy:
+            ParameterName: !Sub ${Environment}/credentialIssuers/ukPassport/self/authCodeExpirySeconds
+        - SSMParameterReadPolicy:
+            ParameterName: !Sub ${Environment}/credentialIssuers/ukPassport/clients
+        - SSMParameterReadPolicy:
+            ParameterName: !Sub ${Environment}/credentialIssuers/ukPassport/clients/*
+      Events:
+        IPVCriUKPassportAPI:
+          Type: Api
+          Properties:
+            RestApiId: !Ref IPVCriUKPassportAPI
+            Path: /token
+            Method: POST
+      AutoPublishAlias: live
+      ProvisionedConcurrencyConfig:
+        !If
+          - AddProvisionedConcurrency
+          - ProvisionedConcurrentExecutions: !FindInMap [ EnvironmentConfiguration, !Ref Environment, provisionedConcurrency ]
+          - !Ref AWS::NoValue
+
+  IPVCriUKPassportAccessTokenFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      RetentionInDays: 14
+      LogGroupName: !Sub "/aws/lambda/ipv-passport-token-${Environment}"
+      KmsKeyId: !GetAtt LoggingKmsKey.Arn
+
+  IPVCriUKPassportAccessTokenFunctionLogGroupSubscriptionFilterCSLS:
+    Type: AWS::Logs::SubscriptionFilter
+    Condition: IsNotDevelopmentEnvironment
+    Properties:
+      DestinationArn: "arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prodpython"
+      FilterPattern: ""
+      LogGroupName: !Ref IPVCriUKPassportAccessTokenFunctionLogGroup
+
+  IPVCriUKPassportCheckPassportFunction:
+    Type: AWS::Serverless::Function
+    DependsOn:
+      - "IPVCriUKPassportCheckPassportFunctionLogGroup"
+    Properties:
+      # checkov:skip=CKV_AWS_115: We do not have enough data to allocate the concurrent execution allowance per function.
+      # checkov:skip=CKV_AWS_116: Lambdas invoked via API Gateway do not support Dead Letter Queues.
+      # checkov:skip=CKV_AWS_117: Lambdas will migrate to our own VPC in future work.
+      FunctionName: !Sub "ipv-passport-check-passport-${Environment}"
+      Handler: uk.gov.di.ipv.cri.passport.checkpassport.CheckPassportHandler::handleRequest
+      Runtime: java11
+      PackageType: Zip
+      CodeUri: ../lambdas/checkpassport
+      Architectures:
+        - arm64
+      MemorySize: 2048
+      Environment:
+        # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
+        Variables:
+          POWERTOOLS_SERVICE_NAME: !Sub "${CriIdentifier}-checkpassport"
+          ENVIRONMENT: !Sub "${Environment}"
+          DCS_RESPONSE_TABLE_NAME: !Select [1, !Split ['/', !GetAtt DCSResponseTable.Arn]]
+          CRI_PASSPORT_ACCESS_TOKENS_TABLE_NAME: !Select [1, !Split ['/', !GetAtt CRIPassportAccessTokensTable.Arn]]
+          CREDENTIAL_ISSUERS_CONFIG_PARAM_PREFIX: !Sub "/${Environment}/credentialIssuers/ukPassport/clients"
+          SQS_AUDIT_EVENT_QUEUE_URL: !ImportValue AuditEventQueueUrl
+          PASSPORT_BACK_SESSIONS_TABLE_NAME: !Ref CRIPassportBackSessionsTable
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref DCSResponseTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref CRIPassportAccessTokensTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref CRIPassportBackSessionsTable
+        - SSMParameterReadPolicy:
+            ParameterName: !Sub ${Environment}/credentialIssuers/ukPassport/*
+        - SSMParameterReadPolicy:
+            ParameterName: !Sub ${Environment}/credentialIssuers/ukPassport/self/backendSessionTtl
+        - SQSSendMessagePolicy:
+            QueueName: !ImportValue AuditEventQueueName
+        - Statement:
+            - Sid: auditEventQueueKmsEncryptionKeyPermission
+              Effect: Allow
+              Action:
+                - 'kms:Decrypt'
+                - 'kms:GenerateDataKey'
+              Resource:
+                - !ImportValue AuditEventQueueEncryptionKeyArn
+      Events:
+        IPVCriUKPassportPrivateAPIDeprecate:
+          Type: Api
+          Properties:
+            RestApiId: !Ref IPVCriUKPassportPrivateAPI
+            Path: /authorization
+            Method: POST
+        IPVCriUKPassportPrivateAPI:
+          Type: Api
+          Properties:
+            RestApiId: !Ref IPVCriUKPassportPrivateAPI
+            Path: /check-passport
+            Method: POST
+      AutoPublishAlias: live
+      ProvisionedConcurrencyConfig:
+        !If
+          - AddProvisionedConcurrency
+          - ProvisionedConcurrentExecutions: !FindInMap [ EnvironmentConfiguration, !Ref Environment, provisionedConcurrency ]
+          - !Ref AWS::NoValue
+
+  IPVCriUKPassportCheckPassportFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      RetentionInDays: 14
+      LogGroupName: !Sub "/aws/lambda/ipv-passport-check-passport-${Environment}"
+      KmsKeyId: !GetAtt LoggingKmsKey.Arn
+
+  IPVCriUKPassportCheckPassportFunctionLogGroupSubscriptionFilterCSLS:
+    Type: AWS::Logs::SubscriptionFilter
+    Condition: IsNotDevelopmentEnvironment
+    Properties:
+      DestinationArn: "arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prodpython"
+      FilterPattern: ""
+      LogGroupName: !Ref IPVCriUKPassportCheckPassportFunctionLogGroup
+
+  IPVCriUKPassportBuildClientOauthResponseFunction:
+    Type: AWS::Serverless::Function
+    DependsOn:
+      - "IPVCriUKPassportBuildClientOauthResponseFunctionLogGroup"
+    Properties:
+      # checkov:skip=CKV_AWS_115: We do not have enough data to allocate the concurrent execution allowance per function.
+      # checkov:skip=CKV_AWS_116: Lambdas invoked via API Gateway do not support Dead Letter Queues.
+      # checkov:skip=CKV_AWS_117: Lambdas will migrate to our own VPC in future work.
+      FunctionName: !Sub "ipv-passport-build-client-oauth-response-${Environment}"
+      Handler: uk.gov.di.ipv.cri.passport.buildclientoauthresponse.BuildClientOauthResponseHandler::handleRequest
+      Runtime: java11
+      PackageType: Zip
+      CodeUri: ../lambdas/buildclientoauthresponse
+      Architectures:
+        - arm64
+      MemorySize: 2048
+      Environment:
+        # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
+        Variables:
+          POWERTOOLS_SERVICE_NAME: !Sub "${CriIdentifier}-buildclientoauthresponse"
+          ENVIRONMENT: !Sub "${Environment}"
+          CRI_PASSPORT_AUTH_CODES_TABLE_NAME: !Ref CRIPassportAuthCodesTable
+          PASSPORT_BACK_SESSIONS_TABLE_NAME: !Ref CRIPassportBackSessionsTable
+          SQS_AUDIT_EVENT_QUEUE_URL: !ImportValue AuditEventQueueUrl
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref CRIPassportAuthCodesTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref CRIPassportBackSessionsTable
+        - SSMParameterReadPolicy:
+            ParameterName: !Sub ${Environment}/credentialIssuers/ukPassport/self/backendSessionTtl
+        - SQSSendMessagePolicy:
+            QueueName: !ImportValue AuditEventQueueName
+        - Statement:
+            - Sid: auditEventQueueKmsEncryptionKeyPermission
+              Effect: Allow
+              Action:
+                - 'kms:Decrypt'
+                - 'kms:GenerateDataKey'
+              Resource:
+                - !ImportValue AuditEventQueueEncryptionKeyArn
+      Events:
+        IPVCriUKPassportPrivateAPI:
+          Type: Api
+          Properties:
+            RestApiId: !Ref IPVCriUKPassportPrivateAPI
+            Path: /build-client-oauth-response
+            Method: POST
+      AutoPublishAlias: live
+      ProvisionedConcurrencyConfig:
+        !If
+        - AddProvisionedConcurrency
+        - ProvisionedConcurrentExecutions: !FindInMap [ EnvironmentConfiguration, !Ref Environment, provisionedConcurrency ]
+        - !Ref AWS::NoValue
+
+  IPVCriUKPassportBuildClientOauthResponseFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      RetentionInDays: 14
+      LogGroupName: !Sub "/aws/lambda/ipv-passport-build-client-oauth-response-${Environment}"
+      KmsKeyId: !GetAtt LoggingKmsKey.Arn
+
+  IPVCriUKPassportBuildClientOauthResponseFunctionLogGroupSubscriptionFilterCSLS:
+    Type: AWS::Logs::SubscriptionFilter
+    Condition: IsNotDevelopmentEnvironment
+    Properties:
+      DestinationArn: "arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prodpython"
+      FilterPattern: ""
+      LogGroupName: !Ref IPVCriUKPassportBuildClientOauthResponseFunctionLogGroup
+
+  IPVCriUKPassportInitialiseSessionFunction:
+    Type: AWS::Serverless::Function
+    DependsOn:
+      - "IPVCriUKPassportInitialiseSessionFunctionLogGroup"
+    Properties:
+      # checkov:skip=CKV_AWS_115: We do not have enough data to allocate the concurrent execution allowance per function.
+      # checkov:skip=CKV_AWS_116: Lambdas invoked via API Gateway do not support Dead Letter Queues.
+      # checkov:skip=CKV_AWS_117: Lambdas will migrate to our own VPC in future work.
+      FunctionName: !Sub "ipv-passport-initialise-session-${Environment}"
+      Handler: uk.gov.di.ipv.cri.passport.initialisesession.InitialiseSessionHandler::handleRequest
+      Runtime: java11
+      PackageType: Zip
+      CodeUri: ../lambdas/initialisesession
+      Architectures:
+        - arm64
+      MemorySize: 2048
+      Environment:
+        # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
+        Variables:
+          POWERTOOLS_SERVICE_NAME: !Sub "${CriIdentifier}-initialisesession"
+          ENVIRONMENT: !Sub "${Environment}"
+          PASSPORT_BACK_SESSIONS_TABLE_NAME: !Select [ 1, !Split [ '/', !GetAtt CRIPassportBackSessionsTable.Arn ] ]
+          CREDENTIAL_ISSUERS_CONFIG_PARAM_PREFIX: !Sub "/${Environment}/credentialIssuers/ukPassport/clients"
+          SQS_AUDIT_EVENT_QUEUE_URL: !ImportValue AuditEventQueueUrl
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref CRIPassportBackSessionsTable
+        - SSMParameterReadPolicy:
+            ParameterName: !Sub "${Environment}/credentialIssuers/ukPassport/clients/*"
+        - SSMParameterReadPolicy:
+            ParameterName: !Sub ${Environment}/credentialIssuers/ukPassport/clients
+        - SSMParameterReadPolicy:
+            ParameterName: !Sub ${Environment}/credentialIssuers/ukPassport/self/maxJwtTtl
+        - SSMParameterReadPolicy:
+            ParameterName: !Sub ${Environment}/credentialIssuers/ukPassport/self/audienceForClients
+        - SSMParameterReadPolicy:
+            ParameterName: !Sub ${Environment}/credentialIssuers/ukPassport/self/jarKmsEncryptionKeyId
+        - SSMParameterReadPolicy:
+            ParameterName: !Sub ${Environment}/credentialIssuers/ukPassport/self/jarKmsEncryptionPublicKey
+        - SSMParameterReadPolicy:
+            ParameterName: !Sub ${Environment}/credentialIssuers/ukPassport/self/backendSessionTtl
+        - SQSSendMessagePolicy:
+            QueueName: !ImportValue AuditEventQueueName
+        - Statement:
+            - Sid: jarKmsEncryptionKeyPermission
+              Effect: Allow
+              Action:
+                - 'kms:Decrypt'
+                - 'kms:GenerateDataKey'
+              Resource:
+                - !ImportValue PassportCriEncryptionKeyArn
+            - Sid: auditEventQueueKmsEncryptionKeyPermission
+              Effect: Allow
+              Action:
+                - 'kms:Decrypt'
+                - 'kms:GenerateDataKey'
+              Resource:
+                - !ImportValue AuditEventQueueEncryptionKeyArn
+      Events:
+        IPVCriUKPassportPrivateAPI:
+          Type: Api
+          Properties:
+            RestApiId: !Ref IPVCriUKPassportPrivateAPI
+            Path: /initialise-session
+            Method: POST
+      AutoPublishAlias: live
+      ProvisionedConcurrencyConfig:
+        !If
+        - AddProvisionedConcurrency
+        - ProvisionedConcurrentExecutions: !FindInMap [ EnvironmentConfiguration, !Ref Environment, provisionedConcurrency ]
+        - !Ref AWS::NoValue
+
+  IPVCriUKPassportInitialiseSessionFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      RetentionInDays: 14
+      LogGroupName: !Sub "/aws/lambda/ipv-passport-initialise-session-${Environment}"
+      KmsKeyId: !GetAtt LoggingKmsKey.Arn
+
+  IPVCriUKPassportInitialiseSessionFunctionLogGroupSubscriptionFilterCSLS:
+    Type: AWS::Logs::SubscriptionFilter
+    Condition: IsNotDevelopmentEnvironment
+    Properties:
+      DestinationArn: "arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prodpython"
+      FilterPattern: ""
+      LogGroupName: !Ref IPVCriUKPassportInitialiseSessionFunctionLogGroup
+
+  DCSResponseTable:
+    Type: AWS::DynamoDB::Table
+    # checkov:skip=CKV_AWS_28: Point in time recovery is not necessary for this table.
+    Properties:
+      TableName: !Sub "dcs-response-${Environment}"
+      BillingMode: "PAY_PER_REQUEST"
+      AttributeDefinitions:
+        - AttributeName: "resourceId"
+          AttributeType: "S"
+      KeySchema:
+        - AttributeName: "resourceId"
+          KeyType: "HASH"
+      TimeToLiveSpecification:
+        AttributeName: "ttl"
+        Enabled: true
+      SSESpecification:
+        # checkov:skip=CKV_AWS_119: Implement Customer Managed Keys in PYIC-1391
+        SSEEnabled: true
+        SSEType: KMS
+
+  CRIPassportAuthCodesTable:
+    Type: AWS::DynamoDB::Table
+    # checkov:skip=CKV_AWS_28: Point in time recovery is not necessary for this table.
+    Properties:
+      TableName: !Sub "cri-passport-auth-codes-${Environment}"
+      BillingMode: "PAY_PER_REQUEST"
+      AttributeDefinitions:
+        - AttributeName: "authCode"
+          AttributeType: "S"
+      KeySchema:
+        - AttributeName: "authCode"
+          KeyType: "HASH"
+      TimeToLiveSpecification:
+        AttributeName: "ttl"
+        Enabled: true
+      SSESpecification:
+        # checkov:skip=CKV_AWS_119: Implement Customer Managed Keys in PYIC-1391
+        SSEEnabled: true
+        SSEType: KMS
+
+  CRIPassportAccessTokensTable:
+    Type: AWS::DynamoDB::Table
+    # checkov:skip=CKV_AWS_28: Point in time recovery is not necessary for this table.
+    Properties:
+      TableName: !Sub "cri-passport-access-tokens-${Environment}"
+      BillingMode: "PAY_PER_REQUEST"
+      AttributeDefinitions:
+        - AttributeName: "accessToken"
+          AttributeType: "S"
+      KeySchema:
+        - AttributeName: "accessToken"
+          KeyType: "HASH"
+      TimeToLiveSpecification:
+        AttributeName: "ttl"
+        Enabled: true
+      SSESpecification:
+        # checkov:skip=CKV_AWS_119: Implement Customer Managed Keys in PYIC-1391
+        SSEEnabled: true
+        SSEType: KMS
+
+  CRIPassportClientAuthJwtIdsTable:
+    Type: AWS::DynamoDB::Table
+    # checkov:skip=CKV_AWS_28: Point in time recovery is not necessary for this table.
+    Properties:
+      TableName: !Sub "cri-passport-client-auth-jwt-ids-${Environment}"
+      BillingMode: "PAY_PER_REQUEST"
+      AttributeDefinitions:
+        - AttributeName: "jwtId"
+          AttributeType: "S"
+      KeySchema:
+        - AttributeName: "jwtId"
+          KeyType: "HASH"
+      TimeToLiveSpecification:
+        AttributeName: "ttl"
+        Enabled: true
+      SSESpecification:
+        # checkov:skip=CKV_AWS_119: Implement Customer Managed Keys in PYIC-1391
+        SSEEnabled: true
+        SSEType: KMS
+
+  CRIPassportBackSessionsTable:
+    Type: AWS::DynamoDB::Table
+    # checkov:skip=CKV_AWS_28: Point in time recovery is not necessary for this table.
+    Properties:
+      TableName: !Sub "cri-passport-back-sessions-${Environment}"
+      BillingMode: "PAY_PER_REQUEST"
+      AttributeDefinitions:
+        - AttributeName: "passportSessionId"
+          AttributeType: "S"
+      KeySchema:
+        - AttributeName: "passportSessionId"
+          KeyType: "HASH"
+      TimeToLiveSpecification:
+        AttributeName: "ttl"
+        Enabled: true
+      SSESpecification:
+        # checkov:skip=CKV_AWS_119: Implement Customer Managed Keys in PYIC-1391
+        SSEEnabled: true
+        SSEType: KMS
+
+  LoggingKmsKey:
+    Type: AWS::KMS::Key
+    Properties:
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"
+            Action:
+              - kms:*
+            Resource: "*"
+          - Effect: Allow
+            Principal:
+              Service: !Sub "logs.${AWS::Region}.amazonaws.com"
+            Action:
+              - "kms:Encrypt*"
+              - "kms:Decrypt*"
+              - "kms:ReEncrypt*"
+              - "kms:GenerateDataKey*"
+              - "kms:Describe*"
+            Resource: "*"
+            Condition:
+              ArnLike:
+                "kms:EncryptionContext:aws:logs:arn": !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*"
+
+  ####################################################################
+  #                                                                  #
+  # Alerts                                                           #
+  #                                                                  #
+  ####################################################################
+
+  PassportLambdaErrors:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: !Sub Passport ${Environment} lambda errors
+      ActionsEnabled: true
+      AlarmActions:
+        - !Ref AlarmTopicPassport
+      OKActions:
+        - !Ref AlarmTopicPassport
+      InsufficientDataActions: []
+      MetricName: Errors
+      Namespace: AWS/Lambda
+      Statistic: Sum
+      Dimensions: []
+      Period: 300
+      DatapointsToAlarm: 3
+      EvaluationPeriods: 3
+      Threshold: 1
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+
+  PassportAPIGW5XXErrors:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: !Sub Passport ${Environment} API Gateway 5XX errors
+      ActionsEnabled: true
+      AlarmActions:
+        - !Ref AlarmTopicPassport
+      OKActions:
+        - !Ref AlarmTopicPassport
+      InsufficientDataActions: []
+      Dimensions: []
+      DatapointsToAlarm: 3
+      EvaluationPeriods: 3
+      Threshold: 1
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      Metrics:
+        - Id: e1
+          Label: Expression1
+          ReturnData: true
+          Expression: SUM(METRICS())
+        - Id: m1
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/ApiGateway
+              MetricName: 5XXError
+              Dimensions:
+                - Name: ApiName
+                  Value: !Sub "IPV CRI UK Passport API Gateway ${Environment}"
+            Period: 300
+            Stat: Sum
+        - Id: m2
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/ApiGateway
+              MetricName: 5XXError
+              Dimensions:
+                - Name: ApiName
+                  Value: !Sub "IPV Passport Back Private API Gateway ${Environment}"
+            Period: 300
+            Stat: Sum
+
+  PassportAPIGW4XXErrors:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: !Sub Passport ${Environment} API Gateway 4XX errors
+      ActionsEnabled: true
+      AlarmActions:
+        - !Ref AlarmTopicPassport
+      OKActions:
+        - !Ref AlarmTopicPassport
+      InsufficientDataActions: []
+      Dimensions: []
+      DatapointsToAlarm: 3
+      EvaluationPeriods: 3
+      Threshold: 2
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      Metrics:
+        - Id: e1
+          Label: Expression1
+          ReturnData: true
+          Expression: SUM(METRICS())
+        - Id: m1
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/ApiGateway
+              MetricName: 4XXError
+              Dimensions:
+                - Name: ApiName
+                  Value: !Sub "IPV CRI UK Passport API Gateway ${Environment}"
+            Period: 300
+            Stat: Sum
+        - Id: m2
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/ApiGateway
+              MetricName: 4XXError
+              Dimensions:
+                - Name: ApiName
+                  Value: !Sub "IPV Passport Back Private API Gateway ${Environment}"
+            Period: 300
+            Stat: Sum
+
+  MaxVCJwtTtlMapping:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub "/${Environment}/credentialIssuers/ukPassport/self/MaxVCJwtTtlMapping"
+      Type: String
+      Value: !FindInMap [ MaxVCJwtTtlMapping, Environment, !Ref Environment ]
+      Description: default time to live for a VC
+
+  JwtTtlUnitParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub "/${Environment}/credentialIssuers/ukPassport/self/JwtTtlUnit"
+      Type: String
+      Value: !FindInMap [ JwtTtlUnitMapping, Environment, !Ref Environment ]
+      Description: The unit for the time-to-live for an JWT e.g. (MONTHS)
+
+  ####################################################################
+  #                                                                  #
+  # Alarm setup                                                      #
+  #                                                                  #
+  ####################################################################
+
+  AlarmTopicPassport:
+    Type: AWS::SNS::Topic
+    # checkov:skip=CKV_AWS_26: We will update this once basic alerting is available
+    Metadata:
+      SamResourceId: AlarmTopicPassport
+  AlarmTopicSubscriptionPagerDutyPassport:
+    Type: AWS::SNS::Subscription
+    Properties:
+      TopicArn:
+        Ref: AlarmTopicPassport
+      Endpoint:
+        Fn::Sub: '{{resolve:ssm:/alerting/pagerduty-passport/url}}'
+      Protocol: https
+    Metadata:
+      SamResourceId: AlarmTopicSubscriptionPagerDutyPassport
+  AlarmPublishToTopicPolicyPassport:
+    Type: AWS::SNS::TopicPolicy
+    Properties:
+      Topics:
+        - Ref: AlarmTopicPassport
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action: sns:Publish
+            Resource:
+              Ref: AlarmTopicPassport
+            Principal:
+              Service: cloudwatch.amazonaws.com
+            Condition:
+              ArnLike:
+                AWS:SourceArn:
+                  Fn::Sub: arn:aws:cloudwatch:${AWS::Region}:${AWS::AccountId}:alarm:*
+    Metadata:
+      SamResourceId: AlarmPublishToTopicPolicyPassport
+
+Outputs:
+  IPVCriUkPassportBackAPIGatewayID:
+    Description: CRI UK Passport API Gateway ID
+    Export:
+      Name: !Sub "PassportBackAPIGatewayID-${Environment}"
+    Value: !Ref IPVCriUKPassportAPI
+  IPVCriUkPassportPrivateAPIGatewayID:
+    Description: CRI UK Passport Private API Gateway ID
+    Export:
+      Name: !Sub "IPVCriUkPassportPrivateAPIGatewayID-${Environment}"
+    Value: !Ref IPVCriUKPassportPrivateAPI
+  IpvCoreBackApiKeyId:
+    # This !Ref isn't set explicitly in this template, it is generated as a result of PER_API in the UsagePlan of IPVCriUKPassportAPI.
+    # See https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/sam-property-api-apiusageplan.html for details
+    Description: >
+      The key id of the api key used by IPV Core to access passport back external api gateway
+    Value: !Ref IPVCriUKPassportAPIApiKey 
+    

@@ -1,0 +1,222 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>JarValidator.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">lib</a> &gt; <a href="index.source.html" class="el_package">uk.gov.di.ipv.cri.passport.library.validation</a> &gt; <span class="el_source">JarValidator.java</span></div><h1>JarValidator.java</h1><pre class="source lang-java linenums">package uk.gov.di.ipv.cri.passport.library.validation;
+
+import com.nimbusds.jose.JOSEException;
+import com.nimbusds.jose.JWEObject;
+import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jose.crypto.ECDSAVerifier;
+import com.nimbusds.jwt.JWTClaimNames;
+import com.nimbusds.jwt.JWTClaimsSet;
+import com.nimbusds.jwt.SignedJWT;
+import com.nimbusds.jwt.proc.BadJWTException;
+import com.nimbusds.jwt.proc.DefaultJWTClaimsVerifier;
+import com.nimbusds.oauth2.sdk.OAuth2Error;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.services.ssm.model.SsmException;
+import uk.gov.di.ipv.cri.passport.library.config.ConfigurationService;
+import uk.gov.di.ipv.cri.passport.library.exceptions.JarValidationException;
+import uk.gov.di.ipv.cri.passport.library.exceptions.RecoverableJarValidationException;
+import uk.gov.di.ipv.cri.passport.library.helpers.JwtHelper;
+import uk.gov.di.ipv.cri.passport.library.service.KmsRsaDecrypter;
+
+import java.net.URI;
+import java.text.ParseException;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.util.List;
+import java.util.Set;
+
+import static uk.gov.di.ipv.cri.passport.library.config.ConfigurationVariable.PASSPORT_CRI_CLIENT_AUDIENCE;
+import static uk.gov.di.ipv.cri.passport.library.config.ConfigurationVariable.PASSPORT_CRI_CLIENT_AUTH_MAX_TTL;
+
+public class JarValidator {
+<span class="fc" id="L33">    private static final Logger LOGGER = LoggerFactory.getLogger(JarValidator.class);</span>
+    private static final String REDIRECT_URI_CLAIM = &quot;redirect_uri&quot;;
+    public static final String CLIENT_ID = &quot;client_id&quot;;
+    private static final String STATE = &quot;state&quot;;
+
+    private final KmsRsaDecrypter kmsRsaDecrypter;
+    private final ConfigurationService configurationService;
+
+    public JarValidator(
+<span class="fc" id="L42">            KmsRsaDecrypter kmsRsaDecrypter, ConfigurationService configurationService) {</span>
+<span class="fc" id="L43">        this.kmsRsaDecrypter = kmsRsaDecrypter;</span>
+<span class="fc" id="L44">        this.configurationService = configurationService;</span>
+<span class="fc" id="L45">    }</span>
+
+    public SignedJWT decryptJWE(JWEObject jweObject) throws JarValidationException {
+        try {
+<span class="fc" id="L49">            jweObject.decrypt(kmsRsaDecrypter);</span>
+
+<span class="fc" id="L51">            return jweObject.getPayload().toSignedJWT();</span>
+<span class="fc" id="L52">        } catch (JOSEException e) {</span>
+<span class="fc" id="L53">            LOGGER.error(&quot;Failed to decrypt the JWE&quot;);</span>
+<span class="fc" id="L54">            throw new JarValidationException(</span>
+<span class="fc" id="L55">                    OAuth2Error.INVALID_REQUEST_OBJECT.setDescription(</span>
+                            &quot;Failed to decrypt the contents of the JAR&quot;));
+        }
+    }
+
+    public JWTClaimsSet validateRequestJwt(SignedJWT signedJWT, String clientId)
+            throws JarValidationException, ParseException {
+<span class="fc" id="L62">        validateQueryParamClientIdIsRecognised(clientId);</span>
+<span class="fc" id="L63">        validateJWTHeader(signedJWT);</span>
+<span class="fc" id="L64">        validateSignature(signedJWT, clientId);</span>
+<span class="fc" id="L65">        JWTClaimsSet claimsSet = signedJWT.getJWTClaimsSet();</span>
+<span class="fc" id="L66">        validateQueryParamClientIdMatchesRequestObjectClientId(clientId, claimsSet);</span>
+<span class="fc" id="L67">        URI redirectUri = validateRedirectUri(claimsSet, clientId);</span>
+
+        try {
+<span class="fc" id="L70">            return getValidatedClaimSet(signedJWT, clientId);</span>
+<span class="fc" id="L71">        } catch (JarValidationException e) {</span>
+<span class="fc" id="L72">            String state = claimsSet.getStringClaim(STATE);</span>
+<span class="fc" id="L73">            throw new RecoverableJarValidationException(</span>
+<span class="fc" id="L74">                    e.getErrorObject(), redirectUri.toString(), state);</span>
+        }
+    }
+
+    private void validateQueryParamClientIdIsRecognised(String clientId)
+            throws JarValidationException {
+        try {
+<span class="fc" id="L81">            configurationService.getClientIssuer(clientId);</span>
+<span class="fc" id="L82">        } catch (SsmException e) {</span>
+<span class="fc" id="L83">            LOGGER.error(&quot;Unknown client id provided {}&quot;, clientId);</span>
+<span class="fc" id="L84">            throw new JarValidationException(</span>
+<span class="fc" id="L85">                    OAuth2Error.INVALID_CLIENT.setDescription(&quot;Unknown client id was provided&quot;));</span>
+<span class="fc" id="L86">        }</span>
+<span class="fc" id="L87">    }</span>
+
+    private void validateQueryParamClientIdMatchesRequestObjectClientId(
+            String queryParamClientId, JWTClaimsSet claimsSet) throws JarValidationException {
+        String requestObjectClientId;
+        try {
+<span class="fc" id="L93">            requestObjectClientId = claimsSet.getStringClaim(CLIENT_ID);</span>
+<span class="fc" id="L94">        } catch (ParseException e) {</span>
+<span class="fc" id="L95">            LOGGER.error(&quot;client_id not found in claims set: '{}'&quot;, e.getMessage());</span>
+<span class="fc" id="L96">            throw new JarValidationException(</span>
+<span class="fc" id="L97">                    OAuth2Error.INVALID_CLIENT.setDescription(</span>
+                            &quot;Client ID could not be parsed from claims set&quot;));
+<span class="fc" id="L99">        }</span>
+<span class="fc bfc" id="L100" title="All 2 branches covered.">        if (!queryParamClientId.equals(requestObjectClientId)) {</span>
+<span class="fc" id="L101">            LOGGER.error(&quot;Query param client ID does not match JAR request object client ID&quot;);</span>
+<span class="fc" id="L102">            throw new JarValidationException(</span>
+<span class="fc" id="L103">                    OAuth2Error.INVALID_CLIENT.setDescription(</span>
+                            &quot;Query param client ID does not match JAR request object client ID&quot;));
+        }
+<span class="fc" id="L106">    }</span>
+
+    private void validateJWTHeader(SignedJWT signedJWT) throws JarValidationException {
+<span class="fc" id="L109">        JWSAlgorithm jwtAlgorithm = signedJWT.getHeader().getAlgorithm();</span>
+<span class="fc bfc" id="L110" title="All 2 branches covered.">        if (jwtAlgorithm != JWSAlgorithm.ES256) {</span>
+<span class="fc" id="L111">            LOGGER.error(</span>
+                    &quot;jwt signing algorithm {} does not match expected signing algorithm ES256&quot;,
+                    jwtAlgorithm);
+<span class="fc" id="L114">            throw new JarValidationException(</span>
+<span class="fc" id="L115">                    OAuth2Error.INVALID_REQUEST_OBJECT.setDescription(</span>
+                            &quot;Signing algorithm used does not match required algorithm&quot;));
+        }
+<span class="fc" id="L118">    }</span>
+
+    private void validateSignature(SignedJWT signedJWT, String clientId)
+            throws JarValidationException {
+        try {
+            SignedJWT concatSignatureJwt;
+<span class="pc bpc" id="L124" title="1 of 2 branches missed.">            if (JwtHelper.signatureIsDerFormat(signedJWT)) {</span>
+<span class="nc" id="L125">                concatSignatureJwt = JwtHelper.transcodeSignature(signedJWT);</span>
+            } else {
+<span class="fc" id="L127">                concatSignatureJwt = signedJWT;</span>
+            }
+<span class="fc" id="L129">            boolean valid =</span>
+<span class="fc" id="L130">                    concatSignatureJwt.verify(</span>
+                            new ECDSAVerifier(
+<span class="fc" id="L132">                                    configurationService.getClientSigningPublicJwk(clientId)));</span>
+
+<span class="fc bfc" id="L134" title="All 2 branches covered.">            if (!valid) {</span>
+<span class="fc" id="L135">                LOGGER.error(&quot;JWT signature validation failed&quot;);</span>
+<span class="fc" id="L136">                throw new JarValidationException(</span>
+<span class="fc" id="L137">                        OAuth2Error.INVALID_REQUEST_OBJECT.setDescription(</span>
+                                &quot;JWT signature validation failed&quot;));
+            }
+<span class="fc" id="L140">        } catch (JOSEException | ParseException e) {</span>
+<span class="fc" id="L141">            LOGGER.error(&quot;Failed to parse JWT when attempting signature validation&quot;);</span>
+<span class="fc" id="L142">            throw new JarValidationException(</span>
+<span class="fc" id="L143">                    OAuth2Error.INVALID_REQUEST_OBJECT.setDescription(</span>
+                            &quot;Failed to parse JWT when attempting signature validation&quot;));
+<span class="fc" id="L145">        }</span>
+<span class="fc" id="L146">    }</span>
+
+    private JWTClaimsSet getValidatedClaimSet(SignedJWT signedJWT, String clientId)
+            throws JarValidationException {
+
+<span class="fc" id="L151">        String criAudience = configurationService.getSsmParameter(PASSPORT_CRI_CLIENT_AUDIENCE);</span>
+<span class="fc" id="L152">        String clientIssuer = configurationService.getClientIssuer(clientId);</span>
+
+<span class="fc" id="L154">        DefaultJWTClaimsVerifier&lt;?&gt; verifier =</span>
+                new DefaultJWTClaimsVerifier&lt;&gt;(
+                        criAudience,
+                        new JWTClaimsSet.Builder()
+<span class="fc" id="L158">                                .issuer(clientIssuer)</span>
+<span class="fc" id="L159">                                .claim(&quot;response_type&quot;, &quot;code&quot;)</span>
+<span class="fc" id="L160">                                .build(),</span>
+<span class="fc" id="L161">                        Set.of(</span>
+                                JWTClaimNames.EXPIRATION_TIME,
+                                JWTClaimNames.NOT_BEFORE,
+                                JWTClaimNames.ISSUED_AT,
+                                JWTClaimNames.SUBJECT));
+
+        try {
+<span class="fc" id="L168">            verifier.verify(signedJWT.getJWTClaimsSet(), null);</span>
+
+<span class="fc" id="L170">            validateMaxAllowedJarTtl(signedJWT.getJWTClaimsSet());</span>
+
+<span class="fc" id="L172">            return signedJWT.getJWTClaimsSet();</span>
+<span class="fc" id="L173">        } catch (BadJWTException | ParseException e) {</span>
+<span class="fc" id="L174">            LOGGER.error(&quot;Claim set validation failed&quot;);</span>
+<span class="fc" id="L175">            throw new JarValidationException(</span>
+<span class="fc" id="L176">                    OAuth2Error.INVALID_GRANT.setDescription(e.getMessage()));</span>
+        }
+    }
+
+    private void validateMaxAllowedJarTtl(JWTClaimsSet claimsSet) throws JarValidationException {
+<span class="fc" id="L181">        String maxAllowedTtl =</span>
+<span class="fc" id="L182">                configurationService.getSsmParameter(PASSPORT_CRI_CLIENT_AUTH_MAX_TTL);</span>
+        LocalDateTime maximumExpirationTime =
+<span class="fc" id="L184">                LocalDateTime.now().plusSeconds(Long.parseLong(maxAllowedTtl));</span>
+<span class="fc" id="L185">        LocalDateTime expirationTime =</span>
+<span class="fc" id="L186">                LocalDateTime.ofInstant(claimsSet.getExpirationTime().toInstant(), ZoneOffset.UTC);</span>
+
+<span class="fc bfc" id="L188" title="All 2 branches covered.">        if (expirationTime.isAfter(maximumExpirationTime)) {</span>
+<span class="fc" id="L189">            LOGGER.error(&quot;Client JWT expiry date is too far in the future&quot;);</span>
+<span class="fc" id="L190">            throw new JarValidationException(</span>
+<span class="fc" id="L191">                    OAuth2Error.INVALID_GRANT.setDescription(</span>
+                            &quot;The client JWT expiry date has surpassed the maximum allowed ttl value&quot;));
+        }
+<span class="fc" id="L194">    }</span>
+
+    private URI validateRedirectUri(JWTClaimsSet claimsSet, String clientId)
+            throws JarValidationException {
+        try {
+<span class="fc" id="L199">            URI redirectUri = claimsSet.getURIClaim(REDIRECT_URI_CLAIM);</span>
+<span class="fc" id="L200">            List&lt;String&gt; allowedRedirectUris = configurationService.getClientRedirectUrls(clientId);</span>
+
+<span class="fc bfc" id="L202" title="All 2 branches covered.">            if (!allowedRedirectUris.contains(redirectUri.toString())) {</span>
+<span class="fc" id="L203">                LOGGER.error(</span>
+                        &quot;Invalid redirect_uri claim ({}) provided for client: {}&quot;,
+                        redirectUri,
+                        clientId);
+<span class="fc" id="L207">                throw new JarValidationException(</span>
+<span class="fc" id="L208">                        OAuth2Error.INVALID_GRANT.setDescription(</span>
+                                &quot;Invalid redirct_uri claim provided for configured client&quot;));
+            }
+
+<span class="fc" id="L212">            return redirectUri;</span>
+<span class="fc" id="L213">        } catch (ParseException e) {</span>
+<span class="fc" id="L214">            LOGGER.error(</span>
+                    &quot;Failed to parse JWT claim set in order to access to the redirect_uri claim&quot;);
+<span class="fc" id="L216">            throw new JarValidationException(</span>
+<span class="fc" id="L217">                    OAuth2Error.INVALID_REQUEST_OBJECT.setDescription(</span>
+                            &quot;Failed to parse JWT claim set in order to access redirect_uri claim&quot;));
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

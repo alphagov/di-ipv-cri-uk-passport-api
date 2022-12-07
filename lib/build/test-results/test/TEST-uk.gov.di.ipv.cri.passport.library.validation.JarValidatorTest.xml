@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.gov.di.ipv.cri.passport.library.validation.JarValidatorTest" tests="18" skipped="0" failures="0" errors="0" timestamp="2022-12-01T12:17:11" hostname="UK-WXY6WYG4WJ" time="0.427">
+  <properties/>
+  <testcase name="shouldFailValidationChecksOnInvalidResponseTypeClaimWithRecoverableError()" classname="uk.gov.di.ipv.cri.passport.library.validation.JarValidatorTest" time="0.138"/>
+  <testcase name="shouldFailValidationChecksOnValidJWTalgHeader()" classname="uk.gov.di.ipv.cri.passport.library.validation.JarValidatorTest" time="0.022"/>
+  <testcase name="shouldFailValidationChecksOnParseFailureOfRedirectUri()" classname="uk.gov.di.ipv.cri.passport.library.validation.JarValidatorTest" time="0.021"/>
+  <testcase name="shouldReturnSignedJwtOnSuccessfulDecryption()" classname="uk.gov.di.ipv.cri.passport.library.validation.JarValidatorTest" time="0.016"/>
+  <testcase name="shouldFailValidationChecksOnExpiredJWTWithRecoverableError()" classname="uk.gov.di.ipv.cri.passport.library.validation.JarValidatorTest" time="0.038"/>
+  <testcase name="shouldPassValidationChecksOnValidJARRequest()" classname="uk.gov.di.ipv.cri.passport.library.validation.JarValidatorTest" time="0.03"/>
+  <testcase name="shouldFailValidationChecksOnExpiryClaimTooFarInFutureWithRecoverableError()" classname="uk.gov.di.ipv.cri.passport.library.validation.JarValidatorTest" time="0.014"/>
+  <testcase name="shouldFailValidationChecksOnMissingRequiredClaimWithRecoverableError()" classname="uk.gov.di.ipv.cri.passport.library.validation.JarValidatorTest" time="0.015"/>
+  <testcase name="shouldFailValidationChecksOnInvalidIssuerClaimWithRecoverableError()" classname="uk.gov.di.ipv.cri.passport.library.validation.JarValidatorTest" time="0.019"/>
+  <testcase name="shouldFailValidationChecksOnMisMatchingClientIds()" classname="uk.gov.di.ipv.cri.passport.library.validation.JarValidatorTest" time="0.008"/>
+  <testcase name="shouldFailValidationChecksOnInvalidAudienceClaimWithRecoverableError()" classname="uk.gov.di.ipv.cri.passport.library.validation.JarValidatorTest" time="0.009"/>
+  <testcase name="shouldFailValidationChecksOnInvalidClientId()" classname="uk.gov.di.ipv.cri.passport.library.validation.JarValidatorTest" time="0.015"/>
+  <testcase name="shouldThrowExceptionIfDecryptionFails()" classname="uk.gov.di.ipv.cri.passport.library.validation.JarValidatorTest" time="0.003"/>
+  <testcase name="shouldFailValidationChecksOnFutureNbfClaimWithRecoverableError()" classname="uk.gov.di.ipv.cri.passport.library.validation.JarValidatorTest" time="0.009"/>
+  <testcase name="shouldFailValidationChecksOnInvalidJWTSignature()" classname="uk.gov.di.ipv.cri.passport.library.validation.JarValidatorTest" time="0.013"/>
+  <testcase name="shouldFailValidationChecksOnInvalidRedirectUriClaim()" classname="uk.gov.di.ipv.cri.passport.library.validation.JarValidatorTest" time="0.007"/>
+  <testcase name="shouldFailValidationChecksIfClientIdNotString()" classname="uk.gov.di.ipv.cri.passport.library.validation.JarValidatorTest" time="0.006"/>
+  <testcase name="shouldFailValidationChecksOnInvalidPublicJwk()" classname="uk.gov.di.ipv.cri.passport.library.validation.JarValidatorTest" time="0.008"/>
+  <system-out><![CDATA[12:17:11.350 [Test worker] ERROR uk.gov.di.ipv.cri.passport.library.validation.JarValidator - Claim set validation failed
+12:17:11.375 [Test worker] ERROR uk.gov.di.ipv.cri.passport.library.validation.JarValidator - jwt signing algorithm RS256 does not match expected signing algorithm ES256
+12:17:11.401 [Test worker] ERROR uk.gov.di.ipv.cri.passport.library.validation.JarValidator - Failed to parse JWT claim set in order to access to the redirect_uri claim
+12:17:11.459 [Test worker] ERROR uk.gov.di.ipv.cri.passport.library.validation.JarValidator - Claim set validation failed
+12:17:11.512 [Test worker] ERROR uk.gov.di.ipv.cri.passport.library.validation.JarValidator - Client JWT expiry date is too far in the future
+12:17:11.528 [Test worker] ERROR uk.gov.di.ipv.cri.passport.library.validation.JarValidator - Claim set validation failed
+12:17:11.548 [Test worker] ERROR uk.gov.di.ipv.cri.passport.library.validation.JarValidator - Claim set validation failed
+12:17:11.556 [Test worker] ERROR uk.gov.di.ipv.cri.passport.library.validation.JarValidator - Query param client ID does not match JAR request object client ID
+12:17:11.566 [Test worker] ERROR uk.gov.di.ipv.cri.passport.library.validation.JarValidator - Claim set validation failed
+12:17:11.580 [Test worker] ERROR uk.gov.di.ipv.cri.passport.library.validation.JarValidator - Unknown client id provided test-client-id
+12:17:11.587 [Test worker] ERROR uk.gov.di.ipv.cri.passport.library.validation.JarValidator - Failed to decrypt the JWE
+12:17:11.597 [Test worker] ERROR uk.gov.di.ipv.cri.passport.library.validation.JarValidator - Claim set validation failed
+12:17:11.615 [Test worker] ERROR uk.gov.di.ipv.cri.passport.library.validation.JarValidator - JWT signature validation failed
+12:17:11.626 [Test worker] ERROR uk.gov.di.ipv.cri.passport.library.validation.JarValidator - Invalid redirect_uri claim (https://example.com) provided for client: test-client-id
+12:17:11.632 [Test worker] ERROR uk.gov.di.ipv.cri.passport.library.validation.JarValidator - client_id not found in claims set: 'The client_id claim is not a String'
+12:17:11.640 [Test worker] ERROR uk.gov.di.ipv.cri.passport.library.validation.JarValidator - Failed to parse JWT when attempting signature validation
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

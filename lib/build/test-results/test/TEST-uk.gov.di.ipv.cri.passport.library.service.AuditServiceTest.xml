@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.gov.di.ipv.cri.passport.library.service.AuditServiceTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2022-12-01T12:17:05" hostname="UK-WXY6WYG4WJ" time="0.365">
+  <properties/>
+  <testcase name="shouldSendMessageToQueueWithUser()" classname="uk.gov.di.ipv.cri.passport.library.service.AuditServiceTest" time="0.344"/>
+  <testcase name="shouldSendMessageToSqsQueue()" classname="uk.gov.di.ipv.cri.passport.library.service.AuditServiceTest" time="0.015"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ConfigurationVariable.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">lib</a> &gt; <a href="index.source.html" class="el_package">uk.gov.di.ipv.cri.passport.library.config</a> &gt; <span class="el_source">ConfigurationVariable.java</span></div><h1>ConfigurationVariable.java</h1><pre class="source lang-java linenums">package uk.gov.di.ipv.cri.passport.library.config;
+
+<span class="fc" id="L3">public enum ConfigurationVariable {</span>
+<span class="fc" id="L4">    AUTH_CODE_EXPIRY_CODE_SECONDS(&quot;/%s/credentialIssuers/ukPassport/self/authCodeExpirySeconds&quot;),</span>
+<span class="fc" id="L5">    BACKEND_SESSION_TTL(&quot;/%s/credentialIssuers/ukPassport/self/backendSessionTtl&quot;),</span>
+<span class="fc" id="L6">    DCS_POST_URL_PARAM(&quot;/%s/credentialIssuers/ukPassport/dcs/postUrl&quot;),</span>
+<span class="fc" id="L7">    DCS_ENCRYPTION_CERT(&quot;/%s/credentialIssuers/ukPassport/dcs/encryptionCertForPassportToEncrypt&quot;),</span>
+<span class="fc" id="L8">    DCS_SIGNING_CERT(&quot;/%s/credentialIssuers/ukPassport/dcs/signingCertForPassportToVerify&quot;),</span>
+<span class="fc" id="L9">    DCS_TLS_INTERMEDIATE_CERT(&quot;/%s/credentialIssuers/ukPassport/dcs/tlsIntermediateCertificate&quot;),</span>
+<span class="fc" id="L10">    DCS_TLS_ROOT_CERT(&quot;/%s/credentialIssuers/ukPassport/dcs/tlsRootCertificate&quot;),</span>
+<span class="fc" id="L11">    JAR_ENCRYPTION_KEY_ID(&quot;/%s/credentialIssuers/ukPassport/self/jarKmsEncryptionKeyId&quot;),</span>
+<span class="fc" id="L12">    JAR_KMS_PUBLIC_KEY(&quot;/%s/credentialIssuers/ukPassport/self/jarKmsEncryptionPublicKey&quot;),</span>
+<span class="fc" id="L13">    MAX_JWT_TTL(&quot;/%s/credentialIssuers/ukPassport/self/maxJwtTtl&quot;),</span>
+<span class="fc" id="L14">    MAXIMUM_ATTEMPT_COUNT(&quot;/%s/credentialIssuers/ukPassport/self/maximumAttemptCount&quot;),</span>
+<span class="fc" id="L15">    PASSPORT_CRI_CLIENT_AUDIENCE(&quot;/%s/credentialIssuers/ukPassport/self/audienceForClients&quot;),</span>
+<span class="fc" id="L16">    PASSPORT_CRI_CLIENT_AUTH_MAX_TTL(&quot;/%s/credentialIssuers/ukPassport/self/maxJwtTtl&quot;),</span>
+<span class="fc" id="L17">    PASSPORT_CRI_CLIENT_VC_MAX_TTL(&quot;/%s/credentialIssuers/ukPassport/self/MaxVCJwtTtlMapping&quot;),</span>
+<span class="fc" id="L18">    PASSPORT_CRI_CLIENT_TTL_UNIT(&quot;/%s/credentialIssuers/ukPassport/self/JwtTtlUnit&quot;),</span>
+<span class="fc" id="L19">    PASSPORT_CRI_ENCRYPTION_KEY(</span>
+            &quot;/%s/credentialIssuers/ukPassport/self/encryptionKeyForPassportToDecrypt&quot;),
+<span class="fc" id="L21">    PASSPORT_CRI_SIGNING_CERT(&quot;/%s/credentialIssuers/ukPassport/self/signingCertForDcsToVerify&quot;),</span>
+<span class="fc" id="L22">    PASSPORT_CRI_SIGNING_KEY(&quot;/%s/credentialIssuers/ukPassport/self/signingKeyForPassportToSign&quot;),</span>
+<span class="fc" id="L23">    PASSPORT_CRI_TLS_CERT(&quot;/%s/credentialIssuers/ukPassport/self/tlsCert&quot;),</span>
+<span class="fc" id="L24">    PASSPORT_CRI_TLS_KEY(&quot;/%s/credentialIssuers/ukPassport/self/tlsKey&quot;),</span>
+<span class="fc" id="L25">    VERIFIABLE_CREDENTIAL_ISSUER(</span>
+            &quot;/%s/credentialIssuers/ukPassport/self/verifiableCredentialIssuer&quot;),
+<span class="fc" id="L27">    VERIFIABLE_CREDENTIAL_SIGNING_KEY_ID(</span>
+            &quot;/%s/credentialIssuers/ukPassport/self/verifiableCredentialKmsSigningKeyId&quot;);
+
+    private final String value;
+
+<span class="fc" id="L32">    ConfigurationVariable(String value) {</span>
+
+<span class="fc" id="L34">        this.value = value;</span>
+<span class="fc" id="L35">    }</span>
+
+    public String getValue() {
+<span class="fc" id="L38">        return value;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

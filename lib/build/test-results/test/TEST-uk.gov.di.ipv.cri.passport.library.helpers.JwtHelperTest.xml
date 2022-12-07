@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.gov.di.ipv.cri.passport.library.helpers.JwtHelperTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2022-12-01T12:17:01" hostname="UK-WXY6WYG4WJ" time="1.326">
+  <properties/>
+  <testcase name="shouldCreateValidSignedJWT()" classname="uk.gov.di.ipv.cri.passport.library.helpers.JwtHelperTest" time="1.326"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

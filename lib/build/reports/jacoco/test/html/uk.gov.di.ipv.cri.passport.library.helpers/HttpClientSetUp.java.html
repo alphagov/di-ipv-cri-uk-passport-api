@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>HttpClientSetUp.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">lib</a> &gt; <a href="index.source.html" class="el_package">uk.gov.di.ipv.cri.passport.library.helpers</a> &gt; <span class="el_source">HttpClientSetUp.java</span></div><h1>HttpClientSetUp.java</h1><pre class="source lang-java linenums">package uk.gov.di.ipv.cri.passport.library.helpers;
+
+import org.apache.http.client.HttpClient;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.ssl.SSLContexts;
+import uk.gov.di.ipv.cri.passport.library.config.ConfigurationService;
+import uk.gov.di.ipv.cri.passport.library.exceptions.HttpClientException;
+
+import javax.net.ssl.SSLContext;
+
+import java.io.IOException;
+import java.security.Key;
+import java.security.KeyManagementException;
+import java.security.KeyStore;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.UnrecoverableKeyException;
+import java.security.cert.Certificate;
+import java.security.cert.CertificateException;
+import java.security.spec.InvalidKeySpecException;
+
+import static uk.gov.di.ipv.cri.passport.library.config.ConfigurationVariable.DCS_TLS_INTERMEDIATE_CERT;
+import static uk.gov.di.ipv.cri.passport.library.config.ConfigurationVariable.DCS_TLS_ROOT_CERT;
+import static uk.gov.di.ipv.cri.passport.library.config.ConfigurationVariable.PASSPORT_CRI_TLS_CERT;
+import static uk.gov.di.ipv.cri.passport.library.config.ConfigurationVariable.PASSPORT_CRI_TLS_KEY;
+
+public class HttpClientSetUp {
+
+<span class="nc" id="L29">    private static final char[] password = &quot;password&quot;.toCharArray();</span>
+
+    private HttpClientSetUp() {}
+
+    public static HttpClient generateHttpClient(ConfigurationService configurationService)
+            throws NoSuchAlgorithmException, InvalidKeySpecException, CertificateException,
+                    KeyStoreException, IOException {
+<span class="nc" id="L36">        KeyStore keystoreTLS =</span>
+<span class="nc" id="L37">                createKeyStore(</span>
+<span class="nc" id="L38">                        configurationService.getCertificate(PASSPORT_CRI_TLS_CERT),</span>
+<span class="nc" id="L39">                        configurationService.getPrivateKey(PASSPORT_CRI_TLS_KEY));</span>
+
+<span class="nc" id="L41">        KeyStore trustStore =</span>
+<span class="nc" id="L42">                createTrustStore(</span>
+                        new Certificate[] {
+<span class="nc" id="L44">                            configurationService.getCertificate(DCS_TLS_ROOT_CERT),</span>
+<span class="nc" id="L45">                            configurationService.getCertificate(DCS_TLS_INTERMEDIATE_CERT)</span>
+                        });
+
+<span class="nc" id="L48">        return contextSetup(keystoreTLS, trustStore);</span>
+    }
+
+    private static HttpClient contextSetup(KeyStore clientTls, KeyStore caBundle) {
+        try {
+            SSLContext sslContext =
+<span class="nc" id="L54">                    SSLContexts.custom()</span>
+<span class="nc" id="L55">                            .loadKeyMaterial(clientTls, password)</span>
+<span class="nc" id="L56">                            .loadTrustMaterial(caBundle, null)</span>
+<span class="nc" id="L57">                            .build();</span>
+
+<span class="nc" id="L59">            return HttpClients.custom().setSSLContext(sslContext).build();</span>
+<span class="nc" id="L60">        } catch (NoSuchAlgorithmException</span>
+                | KeyManagementException
+                | KeyStoreException
+                | UnrecoverableKeyException e) {
+<span class="nc" id="L64">            throw new HttpClientException(e);</span>
+        }
+    }
+
+    private static KeyStore createKeyStore(Certificate cert, Key key)
+            throws KeyStoreException, CertificateException, IOException, NoSuchAlgorithmException {
+<span class="nc" id="L70">        final KeyStore keyStore = KeyStore.getInstance(&quot;JKS&quot;);</span>
+<span class="nc" id="L71">        keyStore.load(null, password);</span>
+
+<span class="nc" id="L73">        keyStore.setKeyEntry(&quot;TlSKey&quot;, key, password, new Certificate[] {cert});</span>
+<span class="nc" id="L74">        keyStore.setCertificateEntry(&quot;my-ca-1&quot;, cert);</span>
+<span class="nc" id="L75">        return keyStore;</span>
+    }
+
+    private static KeyStore createTrustStore(Certificate[] certificates)
+            throws KeyStoreException, CertificateException, IOException, NoSuchAlgorithmException {
+<span class="nc" id="L80">        final KeyStore keyStore = KeyStore.getInstance(&quot;JKS&quot;);</span>
+<span class="nc" id="L81">        keyStore.load(null, null);</span>
+<span class="nc" id="L82">        int k = 0;</span>
+<span class="nc bnc" id="L83" title="All 2 branches missed.">        for (Certificate cert : certificates) {</span>
+<span class="nc" id="L84">            k++;</span>
+<span class="nc" id="L85">            keyStore.setCertificateEntry(&quot;my-ca-&quot; + k, cert);</span>
+        }
+
+<span class="nc" id="L88">        return keyStore;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

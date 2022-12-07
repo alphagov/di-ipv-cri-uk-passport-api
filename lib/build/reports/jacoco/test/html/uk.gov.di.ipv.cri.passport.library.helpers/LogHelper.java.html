@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>LogHelper.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">lib</a> &gt; <a href="index.source.html" class="el_package">uk.gov.di.ipv.cri.passport.library.helpers</a> &gt; <span class="el_source">LogHelper.java</span></div><h1>LogHelper.java</h1><pre class="source lang-java linenums">package uk.gov.di.ipv.cri.passport.library.helpers;
+
+import com.amazonaws.util.StringUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import software.amazon.lambda.powertools.logging.LoggingUtils;
+import uk.gov.di.ipv.cri.passport.library.annotations.ExcludeFromGeneratedCoverageReport;
+
+@ExcludeFromGeneratedCoverageReport
+public class LogHelper {
+    private static final Logger LOGGER = LogManager.getLogger();
+    public static final String COMPONENT_ID = &quot;passport-cri&quot;;
+    public static final String GOVUK_SIGNIN_JOURNEY_ID_DEFAULT_VALUE = &quot;unknown&quot;;
+
+<span class="fc" id="L15">    public enum LogField {</span>
+<span class="fc" id="L16">        CLIENT_ID_LOG_FIELD(&quot;clientId&quot;),</span>
+<span class="fc" id="L17">        COMPONENT_ID_LOG_FIELD(&quot;componentId&quot;),</span>
+<span class="fc" id="L18">        ERROR_CODE_LOG_FIELD(&quot;errorCode&quot;),</span>
+<span class="fc" id="L19">        ERROR_DESCRIPTION_LOG_FIELD(&quot;errorDescription&quot;),</span>
+<span class="fc" id="L20">        PASSPORT_SESSION_ID_LOG_FIELD(&quot;passportSessionId&quot;),</span>
+<span class="fc" id="L21">        GOVUK_SIGNIN_JOURNEY_ID(&quot;govuk_signin_journey_id&quot;),</span>
+<span class="fc" id="L22">        JTI_LOG_FIELD(&quot;jti&quot;),</span>
+<span class="fc" id="L23">        USED_AT_DATE_TIME_LOG_FIELD(&quot;usedAtDateTime&quot;);</span>
+
+        private final String fieldName;
+
+<span class="fc" id="L27">        LogField(String fieldName) {</span>
+<span class="fc" id="L28">            this.fieldName = fieldName;</span>
+<span class="fc" id="L29">        }</span>
+
+        public String getFieldName() {
+<span class="fc" id="L32">            return this.fieldName;</span>
+        }
+    }
+
+    private LogHelper() {
+        throw new IllegalStateException(&quot;Utility class&quot;);
+    }
+
+    public static void attachComponentIdToLogs() {
+        attachFieldToLogs(LogField.COMPONENT_ID_LOG_FIELD, COMPONENT_ID);
+    }
+
+    public static void attachClientIdToLogs(String clientId) {
+        attachFieldToLogs(LogField.CLIENT_ID_LOG_FIELD, clientId);
+    }
+
+    public static void attachPassportSessionIdToLogs(String sessionId) {
+        attachFieldToLogs(LogField.PASSPORT_SESSION_ID_LOG_FIELD, sessionId);
+    }
+
+    public static void attachGovukSigninJourneyIdToLogs(String govukSigninJourneyId) {
+        if (StringUtils.isNullOrEmpty(govukSigninJourneyId)) {
+            attachFieldToLogs(
+                    LogField.GOVUK_SIGNIN_JOURNEY_ID, GOVUK_SIGNIN_JOURNEY_ID_DEFAULT_VALUE);
+        } else {
+            attachFieldToLogs(LogField.GOVUK_SIGNIN_JOURNEY_ID, govukSigninJourneyId);
+        }
+    }
+
+    public static void logOauthError(String message, String errorCode, String errorDescription) {
+        LoggingUtils.appendKey(LogField.ERROR_CODE_LOG_FIELD.getFieldName(), errorCode);
+        LoggingUtils.appendKey(
+                LogField.ERROR_DESCRIPTION_LOG_FIELD.getFieldName(), errorDescription);
+        LOGGER.error(message);
+        LoggingUtils.removeKeys(
+                LogField.ERROR_CODE_LOG_FIELD.getFieldName(),
+                LogField.ERROR_DESCRIPTION_LOG_FIELD.getFieldName());
+    }
+
+    private static void attachFieldToLogs(LogField field, String value) {
+        LoggingUtils.appendKey(field.getFieldName(), value);
+        LOGGER.info(&quot;{} attached to logs&quot;, field);
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

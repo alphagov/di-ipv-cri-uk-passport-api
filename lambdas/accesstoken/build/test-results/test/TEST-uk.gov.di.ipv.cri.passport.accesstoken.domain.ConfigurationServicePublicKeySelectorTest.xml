@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.gov.di.ipv.cri.passport.accesstoken.domain.ConfigurationServicePublicKeySelectorTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2022-12-01T12:17:33" hostname="UK-WXY6WYG4WJ" time="2.18">
+  <properties/>
+  <testcase name="selectClientSecretsThrowsUnsupportedOperationException()" classname="uk.gov.di.ipv.cri.passport.accesstoken.domain.ConfigurationServicePublicKeySelectorTest" time="0.641"/>
+  <testcase name="selectPublicKeysShouldThrowInvalidClientExceptionIfCanNotConvertKeyToJavaInterfaceEcKey()" classname="uk.gov.di.ipv.cri.passport.accesstoken.domain.ConfigurationServicePublicKeySelectorTest" time="1.237"/>
+  <testcase name="selectPublicKeysShouldThrowInvalidClientExceptionIfCanNotParsePublicJwk()" classname="uk.gov.di.ipv.cri.passport.accesstoken.domain.ConfigurationServicePublicKeySelectorTest" time="0.025"/>
+  <testcase name="selectPublicKeysShouldReturnAListOfClientEcPublicKeys()" classname="uk.gov.di.ipv.cri.passport.accesstoken.domain.ConfigurationServicePublicKeySelectorTest" time="0.21"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

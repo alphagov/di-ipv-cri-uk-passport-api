@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.gov.di.ipv.cri.passport.library.persistance.DataStoreTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2022-12-01T12:17:03" hostname="UK-WXY6WYG4WJ" time="1.488">
+  <properties/>
+  <testcase name="shouldGetItemsFromDynamoDbTableViaPartitionKeyQueryRequest()" classname="uk.gov.di.ipv.cri.passport.library.persistance.DataStoreTest" time="1.423"/>
+  <testcase name="shouldGetItemFromDynamoDbTableViaPartitionKeyAndSortKey()" classname="uk.gov.di.ipv.cri.passport.library.persistance.DataStoreTest" time="0.01"/>
+  <testcase name="shouldDeleteItemFromDynamoDbTableViaPartitionKeyAndSortKey()" classname="uk.gov.di.ipv.cri.passport.library.persistance.DataStoreTest" time="0.007"/>
+  <testcase name="shouldPutItemIntoDynamoDbTable()" classname="uk.gov.di.ipv.cri.passport.library.persistance.DataStoreTest" time="0.008"/>
+  <testcase name="shouldGetItemFromDynamoDbTableViaPartitionKey()" classname="uk.gov.di.ipv.cri.passport.library.persistance.DataStoreTest" time="0.009"/>
+  <testcase name="shouldDeleteItemFromDynamoDbTableViaPartitionKey()" classname="uk.gov.di.ipv.cri.passport.library.persistance.DataStoreTest" time="0.008"/>
+  <testcase name="shouldUpdateItemInDynamoDbTable()" classname="uk.gov.di.ipv.cri.passport.library.persistance.DataStoreTest" time="0.013"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

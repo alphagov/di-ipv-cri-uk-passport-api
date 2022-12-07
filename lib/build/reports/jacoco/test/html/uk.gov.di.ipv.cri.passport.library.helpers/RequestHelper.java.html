@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>RequestHelper.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">lib</a> &gt; <a href="index.source.html" class="el_package">uk.gov.di.ipv.cri.passport.library.helpers</a> &gt; <span class="el_source">RequestHelper.java</span></div><h1>RequestHelper.java</h1><pre class="source lang-java linenums">package uk.gov.di.ipv.cri.passport.library.helpers;
+
+import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
+import com.nimbusds.oauth2.sdk.util.StringUtils;
+import org.apache.http.HttpStatus;
+import org.apache.http.NameValuePair;
+import org.apache.http.client.utils.URLEncodedUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import uk.gov.di.ipv.cri.passport.library.error.ErrorResponse;
+import uk.gov.di.ipv.cri.passport.library.exceptions.HttpResponseExceptionWithErrorBody;
+
+import java.nio.charset.Charset;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
+
+public class RequestHelper {
+
+    public static final String PASSPORT_SESSION_ID_HEADER = &quot;passport_session_id&quot;;
+<span class="fc" id="L22">    private static final Logger LOGGER = LoggerFactory.getLogger(RequestHelper.class);</span>
+
+    private RequestHelper() {}
+
+    public static String getHeaderByKey(Map&lt;String, String&gt; headers, String headerKey) {
+<span class="fc bfc" id="L27" title="All 2 branches covered.">        if (Objects.isNull(headers)) {</span>
+<span class="fc" id="L28">            return null;</span>
+        }
+<span class="fc" id="L30">        var values =</span>
+<span class="fc" id="L31">                headers.entrySet().stream()</span>
+<span class="fc" id="L32">                        .filter(e -&gt; headerKey.equalsIgnoreCase(e.getKey()))</span>
+<span class="fc" id="L33">                        .map(Map.Entry::getValue)</span>
+<span class="fc" id="L34">                        .collect(Collectors.toList());</span>
+<span class="fc bfc" id="L35" title="All 2 branches covered.">        if (values.size() == 1) {</span>
+<span class="fc" id="L36">            var value = values.get(0);</span>
+<span class="fc bfc" id="L37" title="All 2 branches covered.">            if (StringUtils.isNotBlank(value)) {</span>
+<span class="fc" id="L38">                return value;</span>
+            }
+        }
+<span class="fc" id="L41">        return null;</span>
+    }
+
+    public static Map&lt;String, String&gt; parseRequestBody(String body) {
+<span class="nc" id="L45">        Map&lt;String, String&gt; queryPairs = new HashMap&lt;&gt;();</span>
+
+<span class="nc bnc" id="L47" title="All 2 branches missed.">        for (NameValuePair pair : URLEncodedUtils.parse(body, Charset.defaultCharset())) {</span>
+<span class="nc" id="L48">            queryPairs.put(pair.getName(), pair.getValue());</span>
+<span class="nc" id="L49">        }</span>
+
+<span class="nc" id="L51">        return queryPairs;</span>
+    }
+
+    public static String getPassportSessionId(APIGatewayProxyRequestEvent event)
+            throws HttpResponseExceptionWithErrorBody {
+<span class="fc" id="L56">        String ipvSessionId =</span>
+<span class="fc" id="L57">                RequestHelper.getHeaderByKey(event.getHeaders(), PASSPORT_SESSION_ID_HEADER);</span>
+<span class="fc bfc" id="L58" title="All 2 branches covered.">        if (ipvSessionId == null) {</span>
+<span class="fc" id="L59">            LOGGER.error(&quot;{} not present in headers&quot;, PASSPORT_SESSION_ID_HEADER);</span>
+<span class="fc" id="L60">            throw new HttpResponseExceptionWithErrorBody(</span>
+                    HttpStatus.SC_BAD_REQUEST, ErrorResponse.MISSING_PASSPORT_SESSION_ID_HEADER);
+        }
+<span class="fc" id="L63">        LogHelper.attachPassportSessionIdToLogs(ipvSessionId);</span>
+<span class="fc" id="L64">        return ipvSessionId;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

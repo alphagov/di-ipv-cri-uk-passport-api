@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>TokenRequestValidator.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">accesstoken</a> &gt; <a href="index.source.html" class="el_package">uk.gov.di.ipv.cri.passport.accesstoken.validation</a> &gt; <span class="el_source">TokenRequestValidator.java</span></div><h1>TokenRequestValidator.java</h1><pre class="source lang-java linenums">package uk.gov.di.ipv.cri.passport.accesstoken.validation;
+
+import com.nimbusds.jose.JOSEException;
+import com.nimbusds.oauth2.sdk.ParseException;
+import com.nimbusds.oauth2.sdk.auth.JWTAuthenticationClaimsSet;
+import com.nimbusds.oauth2.sdk.auth.PrivateKeyJWT;
+import com.nimbusds.oauth2.sdk.auth.verifier.ClientAuthenticationVerifier;
+import com.nimbusds.oauth2.sdk.auth.verifier.InvalidClientException;
+import com.nimbusds.oauth2.sdk.id.Audience;
+import com.nimbusds.oauth2.sdk.id.JWTID;
+import com.nimbusds.oauth2.sdk.util.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import software.amazon.lambda.powertools.logging.LoggingUtils;
+import uk.gov.di.ipv.cri.passport.accesstoken.domain.ConfigurationServicePublicKeySelector;
+import uk.gov.di.ipv.cri.passport.accesstoken.exceptions.ClientAuthenticationException;
+import uk.gov.di.ipv.cri.passport.library.config.ConfigurationService;
+import uk.gov.di.ipv.cri.passport.library.helpers.JwtHelper;
+import uk.gov.di.ipv.cri.passport.library.helpers.LogHelper;
+import uk.gov.di.ipv.cri.passport.library.helpers.LogHelper.LogField;
+import uk.gov.di.ipv.cri.passport.library.helpers.RequestHelper;
+import uk.gov.di.ipv.cri.passport.library.persistence.item.ClientAuthJwtIdItem;
+import uk.gov.di.ipv.cri.passport.library.service.ClientAuthJwtIdService;
+
+import java.time.OffsetDateTime;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+import static uk.gov.di.ipv.cri.passport.library.config.ConfigurationVariable.PASSPORT_CRI_CLIENT_AUDIENCE;
+import static uk.gov.di.ipv.cri.passport.library.config.ConfigurationVariable.PASSPORT_CRI_CLIENT_AUTH_MAX_TTL;
+
+public class TokenRequestValidator {
+<span class="fc" id="L36">    private static final Logger LOGGER = LoggerFactory.getLogger(TokenRequestValidator.class);</span>
+    private static final String CLIENT_ASSERTION_PARAM = &quot;client_assertion&quot;;
+
+    private final ConfigurationService configurationService;
+
+    private final ClientAuthJwtIdService clientAuthJwtIdService;
+
+    private final ClientAuthenticationVerifier&lt;Object&gt; verifier;
+
+    public TokenRequestValidator(
+            ConfigurationService configurationService,
+<span class="fc" id="L47">            ClientAuthJwtIdService clientAuthJwtIdService) {</span>
+<span class="fc" id="L48">        this.configurationService = configurationService;</span>
+<span class="fc" id="L49">        this.clientAuthJwtIdService = clientAuthJwtIdService;</span>
+<span class="fc" id="L50">        this.verifier = getClientAuthVerifier(configurationService);</span>
+<span class="fc" id="L51">    }</span>
+
+    public void authenticateClient(String requestBody) throws ClientAuthenticationException {
+        PrivateKeyJWT clientJwt;
+        try {
+<span class="fc" id="L56">            clientJwt = PrivateKeyJWT.parse(requestBody);</span>
+<span class="fc" id="L57">            verifier.verify(clientJwtWithConcatSignature(clientJwt, requestBody), null, null);</span>
+<span class="fc" id="L58">            JWTAuthenticationClaimsSet claimsSet = clientJwt.getJWTAuthenticationClaimsSet();</span>
+<span class="fc" id="L59">            validateMaxAllowedAuthClientTtl(claimsSet);</span>
+<span class="fc" id="L60">            validateJwtId(claimsSet);</span>
+<span class="fc" id="L61">            LogHelper.attachClientIdToLogs(clientJwt.getClientID().getValue());</span>
+<span class="fc" id="L62">        } catch (ParseException</span>
+                | InvalidClientException
+                | JOSEException
+                | java.text.ParseException e) {
+<span class="fc" id="L66">            LOGGER.error(&quot;Validation of client_assertion jwt failed&quot;);</span>
+<span class="fc" id="L67">            throw new ClientAuthenticationException(e);</span>
+<span class="fc" id="L68">        }</span>
+<span class="fc" id="L69">    }</span>
+
+    private void validateMaxAllowedAuthClientTtl(JWTAuthenticationClaimsSet claimsSet)
+            throws InvalidClientException {
+<span class="fc" id="L73">        Date expirationTime = claimsSet.getExpirationTime();</span>
+<span class="fc" id="L74">        String maxAllowedTtl =</span>
+<span class="fc" id="L75">                configurationService.getSsmParameter(PASSPORT_CRI_CLIENT_AUTH_MAX_TTL);</span>
+
+        OffsetDateTime offsetDateTime =
+<span class="fc" id="L78">                OffsetDateTime.now().plusSeconds(Long.parseLong(maxAllowedTtl));</span>
+<span class="fc bfc" id="L79" title="All 2 branches covered.">        if (expirationTime.getTime() / 1000L &gt; offsetDateTime.toEpochSecond()) {</span>
+<span class="fc" id="L80">            LOGGER.error(&quot;Client JWT expiry date is too far in the future&quot;);</span>
+<span class="fc" id="L81">            throw new InvalidClientException(</span>
+                    &quot;The client JWT expiry date has surpassed the maximum allowed ttl value&quot;);
+        }
+<span class="fc" id="L84">    }</span>
+
+    private void validateJwtId(JWTAuthenticationClaimsSet claimsSet) throws InvalidClientException {
+<span class="fc" id="L87">        JWTID jwtId = claimsSet.getJWTID();</span>
+<span class="pc bpc" id="L88" title="1 of 4 branches missed.">        if (jwtId == null || StringUtils.isBlank(jwtId.getValue())) {</span>
+<span class="fc" id="L89">            LOGGER.error(&quot;The client auth JWT id (jti) is missing&quot;);</span>
+<span class="fc" id="L90">            throw new InvalidClientException(&quot;The client auth JWT id (jti) is missing&quot;);</span>
+        }
+<span class="fc" id="L92">        ClientAuthJwtIdItem clientAuthJwtIdItem =</span>
+<span class="fc" id="L93">                clientAuthJwtIdService.getClientAuthJwtIdItem(jwtId.getValue());</span>
+<span class="fc bfc" id="L94" title="All 2 branches covered.">        if (clientAuthJwtIdItem != null) {</span>
+<span class="fc" id="L95">            LoggingUtils.appendKey(LogField.JTI_LOG_FIELD.getFieldName(), jwtId.getValue());</span>
+<span class="fc" id="L96">            LoggingUtils.appendKey(</span>
+<span class="fc" id="L97">                    LogField.USED_AT_DATE_TIME_LOG_FIELD.getFieldName(),</span>
+<span class="fc" id="L98">                    clientAuthJwtIdItem.getUsedAtDateTime());</span>
+<span class="fc" id="L99">            LOGGER.error(&quot;The client auth JWT id (jti) has already been used&quot;);</span>
+<span class="fc" id="L100">            LoggingUtils.removeKeys(</span>
+<span class="fc" id="L101">                    LogField.JTI_LOG_FIELD.getFieldName(),</span>
+<span class="fc" id="L102">                    LogField.USED_AT_DATE_TIME_LOG_FIELD.getFieldName());</span>
+<span class="fc" id="L103">            throw new InvalidClientException(&quot;The client auth JWT id (jti) has already been used&quot;);</span>
+        }
+<span class="fc" id="L105">        clientAuthJwtIdService.persistClientAuthJwtId(jwtId.getValue());</span>
+<span class="fc" id="L106">    }</span>
+
+    private ClientAuthenticationVerifier&lt;Object&gt; getClientAuthVerifier(
+            ConfigurationService configurationService) {
+
+<span class="fc" id="L111">        ConfigurationServicePublicKeySelector configurationServicePublicKeySelector =</span>
+                new ConfigurationServicePublicKeySelector(configurationService);
+<span class="fc" id="L113">        return new ClientAuthenticationVerifier&lt;&gt;(</span>
+                configurationServicePublicKeySelector,
+<span class="fc" id="L115">                Set.of(</span>
+                        new Audience(
+<span class="fc" id="L117">                                configurationService.getSsmParameter(</span>
+                                        PASSPORT_CRI_CLIENT_AUDIENCE))));
+    }
+
+    private PrivateKeyJWT clientJwtWithConcatSignature(PrivateKeyJWT clientJwt, String requestBody)
+            throws JOSEException, java.text.ParseException, ParseException {
+        // AWS KMS EC signature are in DER format. We need them in concat format.
+<span class="fc bfc" id="L124" title="All 2 branches covered.">        return JwtHelper.signatureIsDerFormat(clientJwt.getClientAssertion())</span>
+<span class="fc" id="L125">                ? transcodeSignatureToConcatFormat(clientJwt, requestBody)</span>
+<span class="fc" id="L126">                : clientJwt;</span>
+    }
+
+    private PrivateKeyJWT transcodeSignatureToConcatFormat(
+            PrivateKeyJWT clientJwt, String requestBody)
+            throws java.text.ParseException, JOSEException, ParseException {
+<span class="fc" id="L132">        Map&lt;String, String&gt; queryStringMap = RequestHelper.parseRequestBody(requestBody);</span>
+<span class="fc" id="L133">        queryStringMap.put(</span>
+                CLIENT_ASSERTION_PARAM,
+<span class="fc" id="L135">                JwtHelper.transcodeSignature(clientJwt.getClientAssertion()).serialize());</span>
+<span class="fc" id="L136">        Map&lt;String, List&lt;String&gt;&gt; queryStringMapForParsing =</span>
+<span class="fc" id="L137">                queryStringMap.entrySet().stream()</span>
+<span class="fc" id="L138">                        .collect(Collectors.toMap(Map.Entry::getKey, e -&gt; List.of(e.getValue())));</span>
+<span class="fc" id="L139">        return PrivateKeyJWT.parse(queryStringMapForParsing);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

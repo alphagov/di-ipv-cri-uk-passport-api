@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.gov.di.ipv.cri.passport.library.service.AccessTokenServiceTest" tests="9" skipped="0" failures="0" errors="0" timestamp="2022-12-01T12:17:05" hostname="UK-WXY6WYG4WJ" time="0.142">
+  <properties/>
+  <testcase name="shouldPersistAccessTokenWhenResourceIdNull()" classname="uk.gov.di.ipv.cri.passport.library.service.AccessTokenServiceTest" time="0.096"/>
+  <testcase name="shouldReturnNullWhenInvalidAccessTokenProvided()" classname="uk.gov.di.ipv.cri.passport.library.service.AccessTokenServiceTest" time="0.003"/>
+  <testcase name="shouldNotAttemptUpdateIfAccessTokenIsAlreadyRevoked()" classname="uk.gov.di.ipv.cri.passport.library.service.AccessTokenServiceTest" time="0.003"/>
+  <testcase name="shouldThrowExceptionIfAccessTokenCanNotBeFoundWhenRevoking()" classname="uk.gov.di.ipv.cri.passport.library.service.AccessTokenServiceTest" time="0.002"/>
+  <testcase name="shouldReturnValidationErrorWhenInvalidGrantTypeProvided()" classname="uk.gov.di.ipv.cri.passport.library.service.AccessTokenServiceTest" time="0.02"/>
+  <testcase name="shouldRevokeAccessToken()" classname="uk.gov.di.ipv.cri.passport.library.service.AccessTokenServiceTest" time="0.002"/>
+  <testcase name="shouldPersistAccessToken()" classname="uk.gov.di.ipv.cri.passport.library.service.AccessTokenServiceTest" time="0.002"/>
+  <testcase name="shouldGetSessionIdByAccessTokenWhenValidAccessTokenProvided()" classname="uk.gov.di.ipv.cri.passport.library.service.AccessTokenServiceTest" time="0.003"/>
+  <testcase name="shouldReturnSuccessfulTokenResponseOnSuccessfulExchange()" classname="uk.gov.di.ipv.cri.passport.library.service.AccessTokenServiceTest" time="0.003"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

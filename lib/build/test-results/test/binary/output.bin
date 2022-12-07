@@ -1,0 +1,19 @@
+
+‡12:17:03.813 [Test worker] ERROR uk.gov.di.ipv.cri.passport.library.helpers.RequestHelper - passport_session_id not present in headers
+;:…12:17:11.116 [Test worker] ERROR uk.gov.di.ipv.cri.passport.library.service.PassportService - Response from DCS has status code: 500
+EDz12:17:11.350 [Test worker] ERROR uk.gov.di.ipv.cri.passport.library.validation.JarValidator - Claim set validation failed
+EFª12:17:11.375 [Test worker] ERROR uk.gov.di.ipv.cri.passport.library.validation.JarValidator - jwt signing algorithm RS256 does not match expected signing algorithm ES256
+EG©12:17:11.401 [Test worker] ERROR uk.gov.di.ipv.cri.passport.library.validation.JarValidator - Failed to parse JWT claim set in order to access to the redirect_uri claim
+EIz12:17:11.459 [Test worker] ERROR uk.gov.di.ipv.cri.passport.library.validation.JarValidator - Claim set validation failed
+EKŽ12:17:11.512 [Test worker] ERROR uk.gov.di.ipv.cri.passport.library.validation.JarValidator - Client JWT expiry date is too far in the future
+ELz12:17:11.528 [Test worker] ERROR uk.gov.di.ipv.cri.passport.library.validation.JarValidator - Claim set validation failed
+EMz12:17:11.548 [Test worker] ERROR uk.gov.di.ipv.cri.passport.library.validation.JarValidator - Claim set validation failed
+EN 12:17:11.556 [Test worker] ERROR uk.gov.di.ipv.cri.passport.library.validation.JarValidator - Query param client ID does not match JAR request object client ID
+EOz12:17:11.566 [Test worker] ERROR uk.gov.di.ipv.cri.passport.library.validation.JarValidator - Claim set validation failed
+EPˆ12:17:11.580 [Test worker] ERROR uk.gov.di.ipv.cri.passport.library.validation.JarValidator - Unknown client id provided test-client-id
+EQx12:17:11.587 [Test worker] ERROR uk.gov.di.ipv.cri.passport.library.validation.JarValidator - Failed to decrypt the JWE
+ERz12:17:11.597 [Test worker] ERROR uk.gov.di.ipv.cri.passport.library.validation.JarValidator - Claim set validation failed
+ES~12:17:11.615 [Test worker] ERROR uk.gov.di.ipv.cri.passport.library.validation.JarValidator - JWT signature validation failed
+ET³12:17:11.626 [Test worker] ERROR uk.gov.di.ipv.cri.passport.library.validation.JarValidator - Invalid redirect_uri claim (https://example.com) provided for client: test-client-id
+EU§12:17:11.632 [Test worker] ERROR uk.gov.di.ipv.cri.passport.library.validation.JarValidator - client_id not found in claims set: 'The client_id claim is not a String'
+EV—12:17:11.640 [Test worker] ERROR uk.gov.di.ipv.cri.passport.library.validation.JarValidator - Failed to parse JWT when attempting signature validation

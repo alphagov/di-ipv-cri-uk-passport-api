@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ConfigurationService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">lib</a> &gt; <a href="index.source.html" class="el_package">uk.gov.di.ipv.cri.passport.library.config</a> &gt; <span class="el_source">ConfigurationService.java</span></div><h1>ConfigurationService.java</h1><pre class="source lang-java linenums">package uk.gov.di.ipv.cri.passport.library.config;
+
+import com.nimbusds.jose.jwk.ECKey;
+import software.amazon.awssdk.http.urlconnection.UrlConnectionHttpClient;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.ssm.SsmClient;
+import software.amazon.lambda.powertools.parameters.ParamManager;
+import software.amazon.lambda.powertools.parameters.SSMProvider;
+import uk.gov.di.ipv.cri.passport.library.domain.Thumbprints;
+import uk.gov.di.ipv.cri.passport.library.exceptions.UnknownClientException;
+
+import java.io.ByteArrayInputStream;
+import java.net.URI;
+import java.security.KeyFactory;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.security.PrivateKey;
+import java.security.cert.Certificate;
+import java.security.cert.CertificateEncodingException;
+import java.security.cert.CertificateException;
+import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
+import java.security.spec.InvalidKeySpecException;
+import java.security.spec.PKCS8EncodedKeySpec;
+import java.text.ParseException;
+import java.time.Clock;
+import java.time.OffsetDateTime;
+import java.time.temporal.ChronoUnit;
+import java.util.Arrays;
+import java.util.Base64;
+import java.util.List;
+import java.util.Optional;
+
+import static uk.gov.di.ipv.cri.passport.library.config.ConfigurationVariable.PASSPORT_CRI_CLIENT_TTL_UNIT;
+import static uk.gov.di.ipv.cri.passport.library.config.ConfigurationVariable.PASSPORT_CRI_CLIENT_VC_MAX_TTL;
+import static uk.gov.di.ipv.cri.passport.library.config.ConfigurationVariable.PASSPORT_CRI_SIGNING_CERT;
+import static uk.gov.di.ipv.cri.passport.library.config.EnvironmentVariable.BEARER_TOKEN_TTL;
+import static uk.gov.di.ipv.cri.passport.library.config.EnvironmentVariable.DYNAMODB_ENDPOINT_OVERRIDE;
+import static uk.gov.di.ipv.cri.passport.library.config.EnvironmentVariable.ENVIRONMENT;
+
+public class ConfigurationService {
+
+    public static final int LOCALHOST_PORT = 4567;
+    private static final String LOCALHOST_URI = &quot;http://localhost:&quot; + LOCALHOST_PORT;
+    private static final long DEFAULT_ACCESS_TOKEN_EXPIRY_SECONDS = 3600L;
+    private static final String IS_LOCAL = &quot;IS_LOCAL&quot;;
+    private static final String CLIENT_REDIRECT_URL_SEPARATOR = &quot;,&quot;;
+    public static final String CREDENTIAL_ISSUERS_CONFIG_PARAM_PREFIX =
+            &quot;CREDENTIAL_ISSUERS_CONFIG_PARAM_PREFIX&quot;;
+
+    private final SSMProvider ssmProvider;
+
+<span class="fc" id="L53">    public ConfigurationService(SSMProvider ssmProvider) {</span>
+<span class="fc" id="L54">        this.ssmProvider = ssmProvider;</span>
+<span class="fc" id="L55">    }</span>
+
+<span class="fc" id="L57">    public ConfigurationService() {</span>
+<span class="pc bpc" id="L58" title="1 of 2 branches missed.">        if (isRunningLocally()) {</span>
+<span class="fc" id="L59">            this.ssmProvider =</span>
+<span class="fc" id="L60">                    ParamManager.getSsmProvider(</span>
+<span class="fc" id="L61">                            SsmClient.builder()</span>
+<span class="fc" id="L62">                                    .endpointOverride(URI.create(LOCALHOST_URI))</span>
+<span class="fc" id="L63">                                    .httpClient(UrlConnectionHttpClient.create())</span>
+<span class="fc" id="L64">                                    .region(Region.EU_WEST_2)</span>
+<span class="fc" id="L65">                                    .build());</span>
+        } else {
+<span class="nc" id="L67">            this.ssmProvider = ParamManager.getSsmProvider();</span>
+        }
+<span class="fc" id="L69">    }</span>
+
+    public SSMProvider getSsmProvider() {
+<span class="fc" id="L72">        return ssmProvider;</span>
+    }
+
+    public boolean isRunningLocally() {
+<span class="fc" id="L76">        return Boolean.parseBoolean(System.getenv(IS_LOCAL));</span>
+    }
+
+    public String getEnvironmentVariable(EnvironmentVariable environmentVariable) {
+<span class="fc" id="L80">        return System.getenv(environmentVariable.name());</span>
+    }
+
+    public String getSsmParameter(ConfigurationVariable configurationVariable) {
+<span class="fc" id="L84">        return ssmProvider.get(</span>
+<span class="fc" id="L85">                String.format(</span>
+<span class="fc" id="L86">                        configurationVariable.getValue(), getEnvironmentVariable(ENVIRONMENT)));</span>
+    }
+
+    public String getEncryptedSsmParameter(ConfigurationVariable configurationVariable) {
+<span class="fc" id="L90">        return ssmProvider</span>
+<span class="fc" id="L91">                .withDecryption()</span>
+<span class="fc" id="L92">                .get(</span>
+<span class="fc" id="L93">                        String.format(</span>
+<span class="fc" id="L94">                                configurationVariable.getValue(),</span>
+<span class="fc" id="L95">                                getEnvironmentVariable(ENVIRONMENT)));</span>
+    }
+
+    public Certificate getCertificate(ConfigurationVariable configurationVariable)
+            throws CertificateException {
+        byte[] binaryCertificate =
+<span class="nc" id="L101">                Base64.getDecoder().decode(getEncryptedSsmParameter(configurationVariable));</span>
+<span class="nc" id="L102">        CertificateFactory factory = CertificateFactory.getInstance(&quot;X.509&quot;);</span>
+<span class="nc" id="L103">        return factory.generateCertificate(new ByteArrayInputStream(binaryCertificate));</span>
+    }
+
+    public PrivateKey getPrivateKey(ConfigurationVariable configurationVariable)
+            throws NoSuchAlgorithmException, InvalidKeySpecException {
+        byte[] binaryKey =
+<span class="fc" id="L109">                Base64.getDecoder().decode(getEncryptedSsmParameter(configurationVariable));</span>
+<span class="fc" id="L110">        KeyFactory factory = KeyFactory.getInstance(&quot;RSA&quot;);</span>
+<span class="fc" id="L111">        PKCS8EncodedKeySpec privateKeySpec = new PKCS8EncodedKeySpec(binaryKey);</span>
+<span class="fc" id="L112">        return factory.generatePrivate(privateKeySpec);</span>
+    }
+
+    public Thumbprints makeThumbprints() throws CertificateException, NoSuchAlgorithmException {
+<span class="nc" id="L116">        var cert = getCertificate(PASSPORT_CRI_SIGNING_CERT);</span>
+<span class="nc" id="L117">        return new Thumbprints(</span>
+<span class="nc" id="L118">                getThumbprint((X509Certificate) cert, &quot;SHA-1&quot;),</span>
+<span class="nc" id="L119">                getThumbprint((X509Certificate) cert, &quot;SHA-256&quot;));</span>
+    }
+
+    public String getThumbprint(X509Certificate cert, String hashAlg)
+            throws NoSuchAlgorithmException, CertificateEncodingException {
+<span class="nc" id="L124">        MessageDigest md = MessageDigest.getInstance(hashAlg);</span>
+<span class="nc" id="L125">        byte[] der = cert.getEncoded();</span>
+<span class="nc" id="L126">        md.update(der);</span>
+<span class="nc" id="L127">        byte[] digest = md.digest();</span>
+<span class="nc" id="L128">        return Base64.getUrlEncoder().withoutPadding().encodeToString(digest);</span>
+    }
+
+    public long getAccessTokenExpirySeconds() {
+<span class="nc" id="L132">        return Optional.ofNullable(getEnvironmentVariable(BEARER_TOKEN_TTL))</span>
+<span class="nc" id="L133">                .map(Long::valueOf)</span>
+<span class="nc" id="L134">                .orElse(DEFAULT_ACCESS_TOKEN_EXPIRY_SECONDS);</span>
+    }
+
+    public URI getDynamoDbEndpointOverride() {
+<span class="nc" id="L138">        String dynamoDbEndpointOverride = getEnvironmentVariable(DYNAMODB_ENDPOINT_OVERRIDE);</span>
+<span class="nc bnc" id="L139" title="All 4 branches missed.">        if (dynamoDbEndpointOverride != null &amp;&amp; !dynamoDbEndpointOverride.isEmpty()) {</span>
+<span class="nc" id="L140">            return URI.create(dynamoDbEndpointOverride);</span>
+        }
+<span class="nc" id="L142">        return null;</span>
+    }
+
+    public ECKey getClientSigningPublicJwk(String clientId) throws ParseException {
+<span class="nc" id="L146">        return ECKey.parse(</span>
+<span class="nc" id="L147">                ssmProvider.get(</span>
+<span class="nc" id="L148">                        String.format(</span>
+                                &quot;%s/%s/signingPublicJwk&quot;,
+<span class="nc" id="L150">                                System.getenv(CREDENTIAL_ISSUERS_CONFIG_PARAM_PREFIX), clientId)));</span>
+    }
+
+    public List&lt;String&gt; getClientRedirectUrls(String clientId) throws UnknownClientException {
+<span class="nc" id="L154">        String redirectUrlStrings =</span>
+<span class="nc" id="L155">                ssmProvider.get(</span>
+<span class="nc" id="L156">                        String.format(</span>
+                                &quot;%s/%s/jwtAuthentication/validRedirectUrls&quot;,
+<span class="nc" id="L158">                                System.getenv(CREDENTIAL_ISSUERS_CONFIG_PARAM_PREFIX), clientId));</span>
+
+<span class="nc" id="L160">        return Arrays.asList(redirectUrlStrings.split(CLIENT_REDIRECT_URL_SEPARATOR));</span>
+    }
+
+    public String getClientIssuer(String clientId) throws UnknownClientException {
+<span class="nc" id="L164">        return ssmProvider.get(</span>
+<span class="nc" id="L165">                String.format(</span>
+                        &quot;%s/%s/jwtAuthentication/issuer&quot;,
+<span class="nc" id="L167">                        System.getenv(CREDENTIAL_ISSUERS_CONFIG_PARAM_PREFIX), clientId));</span>
+    }
+
+    public long getVcExpiryTime() throws UnknownClientException {
+<span class="fc" id="L171">        ChronoUnit jwtTtlUnit = ChronoUnit.valueOf(getSsmParameter(PASSPORT_CRI_CLIENT_TTL_UNIT));</span>
+<span class="fc" id="L172">        long ttl = Long.parseLong(getSsmParameter(PASSPORT_CRI_CLIENT_VC_MAX_TTL));</span>
+<span class="fc" id="L173">        OffsetDateTime dateTimeNow = OffsetDateTime.now(Clock.systemUTC());</span>
+
+<span class="pc bpc" id="L175" title="6 of 7 branches missed.">        switch (jwtTtlUnit) {</span>
+            case SECONDS:
+<span class="nc" id="L177">                return dateTimeNow.plusSeconds(ttl).toEpochSecond();</span>
+            case MINUTES:
+<span class="nc" id="L179">                return dateTimeNow.plusMinutes(ttl).toEpochSecond();</span>
+            case HOURS:
+<span class="fc" id="L181">                return dateTimeNow.plusHours(ttl).toEpochSecond();</span>
+            case DAYS:
+<span class="nc" id="L183">                return dateTimeNow.plusDays(ttl).toEpochSecond();</span>
+            case MONTHS:
+<span class="nc" id="L185">                return dateTimeNow.plusMonths(ttl).toEpochSecond();</span>
+            case YEARS:
+<span class="nc" id="L187">                return dateTimeNow.plusYears(ttl).toEpochSecond();</span>
+            default:
+<span class="nc" id="L189">                throw new IllegalStateException(</span>
+                        &quot;Unexpected time-to-live unit encountered: &quot; + jwtTtlUnit);
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

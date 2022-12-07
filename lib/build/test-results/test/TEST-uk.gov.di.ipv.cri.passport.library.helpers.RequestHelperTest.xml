@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.gov.di.ipv.cri.passport.library.helpers.RequestHelperTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2022-12-01T12:17:03" hostname="UK-WXY6WYG4WJ" time="0.78">
+  <properties/>
+  <testcase name="getHeaderByKeyShouldReturnNullIfNoHeadersProvided()" classname="uk.gov.di.ipv.cri.passport.library.helpers.RequestHelperTest" time="0.733"/>
+  <testcase name="getHeaderByKeyShouldReturnNullIfHeaderNotFound()" classname="uk.gov.di.ipv.cri.passport.library.helpers.RequestHelperTest" time="0.002"/>
+  <testcase name="getPassportSessionIdShouldReturnSessionIdFromHeaders()" classname="uk.gov.di.ipv.cri.passport.library.helpers.RequestHelperTest" time="0.011"/>
+  <testcase name="getPassportSessionIdShouldThrowIfSessionIdNotFound()" classname="uk.gov.di.ipv.cri.passport.library.helpers.RequestHelperTest" time="0.03"/>
+  <testcase name="getHeaderByKeyShouldReturnHeaderIfMatchFound()" classname="uk.gov.di.ipv.cri.passport.library.helpers.RequestHelperTest" time="0.0"/>
+  <system-out><![CDATA[12:17:03.813 [Test worker] ERROR uk.gov.di.ipv.cri.passport.library.helpers.RequestHelper - passport_session_id not present in headers
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

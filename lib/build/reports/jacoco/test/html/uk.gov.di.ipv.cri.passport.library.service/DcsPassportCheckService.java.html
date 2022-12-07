@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DcsPassportCheckService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">lib</a> &gt; <a href="index.source.html" class="el_package">uk.gov.di.ipv.cri.passport.library.service</a> &gt; <span class="el_source">DcsPassportCheckService.java</span></div><h1>DcsPassportCheckService.java</h1><pre class="source lang-java linenums">package uk.gov.di.ipv.cri.passport.library.service;
+
+import uk.gov.di.ipv.cri.passport.library.annotations.ExcludeFromGeneratedCoverageReport;
+import uk.gov.di.ipv.cri.passport.library.config.ConfigurationService;
+import uk.gov.di.ipv.cri.passport.library.persistence.DataStore;
+import uk.gov.di.ipv.cri.passport.library.persistence.item.PassportCheckDao;
+
+import static uk.gov.di.ipv.cri.passport.library.config.EnvironmentVariable.DCS_RESPONSE_TABLE_NAME;
+
+public class DcsPassportCheckService {
+    private final DataStore&lt;PassportCheckDao&gt; dataStore;
+
+    @ExcludeFromGeneratedCoverageReport
+    public DcsPassportCheckService(ConfigurationService configurationService) {
+        this.dataStore =
+                new DataStore&lt;&gt;(
+                        configurationService.getEnvironmentVariable(DCS_RESPONSE_TABLE_NAME),
+                        PassportCheckDao.class,
+                        DataStore.getClient(configurationService.getDynamoDbEndpointOverride()),
+                        configurationService);
+    }
+
+<span class="fc" id="L23">    public DcsPassportCheckService(DataStore&lt;PassportCheckDao&gt; dataStore) {</span>
+<span class="fc" id="L24">        this.dataStore = dataStore;</span>
+<span class="fc" id="L25">    }</span>
+
+    public PassportCheckDao getDcsPassportCheck(String resourceId) {
+<span class="fc" id="L28">        return dataStore.getItem(resourceId);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

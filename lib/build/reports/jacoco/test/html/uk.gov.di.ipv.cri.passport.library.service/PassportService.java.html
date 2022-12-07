@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PassportService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">lib</a> &gt; <a href="index.source.html" class="el_package">uk.gov.di.ipv.cri.passport.library.service</a> &gt; <span class="el_source">PassportService.java</span></div><h1>PassportService.java</h1><pre class="source lang-java linenums">package uk.gov.di.ipv.cri.passport.library.service;
+
+import com.nimbusds.jose.JWSObject;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.HttpResponseException;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.StringEntity;
+import org.apache.http.util.EntityUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import uk.gov.di.ipv.cri.common.library.util.EventProbe;
+import uk.gov.di.ipv.cri.passport.library.config.ConfigurationService;
+import uk.gov.di.ipv.cri.passport.library.config.EnvironmentVariable;
+import uk.gov.di.ipv.cri.passport.library.domain.DcsSignedEncryptedResponse;
+import uk.gov.di.ipv.cri.passport.library.exceptions.EmptyDcsResponseException;
+import uk.gov.di.ipv.cri.passport.library.helpers.HttpClientSetUp;
+import uk.gov.di.ipv.cri.passport.library.persistence.DataStore;
+import uk.gov.di.ipv.cri.passport.library.persistence.item.PassportCheckDao;
+
+import java.io.IOException;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.cert.CertificateException;
+import java.security.spec.InvalidKeySpecException;
+
+import static uk.gov.di.ipv.cri.passport.library.config.ConfigurationVariable.DCS_POST_URL_PARAM;
+import static uk.gov.di.ipv.cri.passport.library.metrics.Definitions.THIRD_PARTY_DCS_RESPONSE_OK;
+import static uk.gov.di.ipv.cri.passport.library.metrics.Definitions.THIRD_PARTY_DCS_RESPONSE_TYPE_EMPTY;
+import static uk.gov.di.ipv.cri.passport.library.metrics.Definitions.THIRD_PARTY_DCS_RESPONSE_TYPE_ERROR;
+
+public class PassportService {
+
+    public static final String CONTENT_TYPE = &quot;content-type&quot;;
+    public static final String APPLICATION_JOSE = &quot;application/jose&quot;;
+<span class="fc" id="L36">    private static final Logger LOGGER = LoggerFactory.getLogger(PassportService.class);</span>
+    private final ConfigurationService configurationService;
+    private final DataStore&lt;PassportCheckDao&gt; dataStore;
+    private final HttpClient httpClient;
+    private final EventProbe eventProbe;
+
+    public PassportService(
+            HttpClient httpClient,
+            ConfigurationService configurationService,
+            DataStore&lt;PassportCheckDao&gt; dataStore,
+<span class="fc" id="L46">            EventProbe eventProbe) {</span>
+<span class="fc" id="L47">        this.httpClient = httpClient;</span>
+<span class="fc" id="L48">        this.configurationService = configurationService;</span>
+<span class="fc" id="L49">        this.dataStore = dataStore;</span>
+<span class="fc" id="L50">        this.eventProbe = eventProbe;</span>
+<span class="fc" id="L51">    }</span>
+
+    public PassportService(ConfigurationService configurationService, EventProbe eventProbe)
+            throws CertificateException, NoSuchAlgorithmException, InvalidKeySpecException,
+<span class="nc" id="L55">                    KeyStoreException, IOException {</span>
+<span class="nc" id="L56">        this.configurationService = configurationService;</span>
+<span class="nc" id="L57">        this.eventProbe = eventProbe;</span>
+<span class="nc" id="L58">        this.dataStore =</span>
+                new DataStore&lt;&gt;(
+<span class="nc" id="L60">                        this.configurationService.getEnvironmentVariable(</span>
+                                EnvironmentVariable.DCS_RESPONSE_TABLE_NAME),
+                        PassportCheckDao.class,
+<span class="nc" id="L63">                        DataStore.getClient(</span>
+<span class="nc" id="L64">                                this.configurationService.getDynamoDbEndpointOverride()),</span>
+                        configurationService);
+<span class="nc" id="L66">        this.httpClient = HttpClientSetUp.generateHttpClient(this.configurationService);</span>
+<span class="nc" id="L67">    }</span>
+
+    public DcsSignedEncryptedResponse dcsPassportCheck(JWSObject payload)
+            throws IOException, EmptyDcsResponseException {
+<span class="fc" id="L71">        HttpPost request = new HttpPost(configurationService.getSsmParameter(DCS_POST_URL_PARAM));</span>
+<span class="fc" id="L72">        request.addHeader(CONTENT_TYPE, APPLICATION_JOSE);</span>
+<span class="fc" id="L73">        request.setEntity(new StringEntity(payload.serialize()));</span>
+
+<span class="fc" id="L75">        HttpResponse response = httpClient.execute(request);</span>
+
+<span class="fc bfc" id="L77" title="All 2 branches covered.">        if (response == null) {</span>
+<span class="fc" id="L78">            eventProbe.counterMetric(THIRD_PARTY_DCS_RESPONSE_TYPE_EMPTY);</span>
+<span class="fc" id="L79">            throw new EmptyDcsResponseException(&quot;Response from DCS is empty&quot;);</span>
+        }
+
+<span class="fc bfc" id="L82" title="All 2 branches covered.">        if (response.getStatusLine().getStatusCode() != 200) {</span>
+<span class="fc" id="L83">            int statusCode = response.getStatusLine().getStatusCode();</span>
+<span class="fc" id="L84">            LOGGER.error(&quot;Response from DCS has status code: {}&quot;, statusCode);</span>
+<span class="fc" id="L85">            eventProbe.counterMetric(THIRD_PARTY_DCS_RESPONSE_TYPE_ERROR);</span>
+<span class="fc" id="L86">            throw new HttpResponseException(</span>
+<span class="fc" id="L87">                    response.getStatusLine().getStatusCode(), &quot;DCS responded with an error&quot;);</span>
+        }
+
+<span class="fc" id="L90">        eventProbe.counterMetric(THIRD_PARTY_DCS_RESPONSE_OK);</span>
+
+<span class="fc" id="L92">        return new DcsSignedEncryptedResponse(EntityUtils.toString(response.getEntity()));</span>
+    }
+
+    public void persistDcsResponse(PassportCheckDao responsePayload) {
+<span class="fc" id="L96">        dataStore.create(responsePayload);</span>
+<span class="fc" id="L97">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

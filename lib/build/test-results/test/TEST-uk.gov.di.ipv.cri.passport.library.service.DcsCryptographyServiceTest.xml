@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.gov.di.ipv.cri.passport.library.service.DcsCryptographyServiceTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2022-12-01T12:17:09" hostname="UK-WXY6WYG4WJ" time="0.592">
+  <properties/>
+  <testcase name="shouldPreparePayloadForDcsRequest()" classname="uk.gov.di.ipv.cri.passport.library.service.DcsCryptographyServiceTest" time="0.311"/>
+  <testcase name="shouldThrowExceptionForInvalidOuterSignatureWhenUsingIncorrectCertificate()" classname="uk.gov.di.ipv.cri.passport.library.service.DcsCryptographyServiceTest" time="0.067"/>
+  <testcase name="shouldThrowExceptionForInvalidInnerSignatureWhenUsingIncorrectCertificate()" classname="uk.gov.di.ipv.cri.passport.library.service.DcsCryptographyServiceTest" time="0.063"/>
+  <testcase name="shouldThrowExceptionWhenFailingToDecryptWithInvalidPrivateKey()" classname="uk.gov.di.ipv.cri.passport.library.service.DcsCryptographyServiceTest" time="0.05"/>
+  <testcase name="shouldUnwrapDcsResponse()" classname="uk.gov.di.ipv.cri.passport.library.service.DcsCryptographyServiceTest" time="0.087"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

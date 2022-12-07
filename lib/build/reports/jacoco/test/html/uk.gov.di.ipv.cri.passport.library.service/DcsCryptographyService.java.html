@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DcsCryptographyService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">lib</a> &gt; <a href="index.source.html" class="el_package">uk.gov.di.ipv.cri.passport.library.service</a> &gt; <span class="el_source">DcsCryptographyService.java</span></div><h1>DcsCryptographyService.java</h1><pre class="source lang-java linenums">package uk.gov.di.ipv.cri.passport.library.service;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
+import com.nimbusds.jose.EncryptionMethod;
+import com.nimbusds.jose.JOSEException;
+import com.nimbusds.jose.JOSEObjectType;
+import com.nimbusds.jose.JWEAlgorithm;
+import com.nimbusds.jose.JWEHeader;
+import com.nimbusds.jose.JWEObject;
+import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jose.JWSHeader;
+import com.nimbusds.jose.JWSObject;
+import com.nimbusds.jose.Payload;
+import com.nimbusds.jose.crypto.RSADecrypter;
+import com.nimbusds.jose.crypto.RSAEncrypter;
+import com.nimbusds.jose.crypto.RSASSASigner;
+import com.nimbusds.jose.crypto.RSASSAVerifier;
+import uk.gov.di.ipv.cri.passport.library.config.ConfigurationService;
+import uk.gov.di.ipv.cri.passport.library.domain.DcsPayload;
+import uk.gov.di.ipv.cri.passport.library.domain.DcsResponse;
+import uk.gov.di.ipv.cri.passport.library.domain.DcsSignedEncryptedResponse;
+import uk.gov.di.ipv.cri.passport.library.domain.ProtectedHeader;
+import uk.gov.di.ipv.cri.passport.library.domain.Thumbprints;
+import uk.gov.di.ipv.cri.passport.library.exceptions.IpvCryptoException;
+
+import java.security.NoSuchAlgorithmException;
+import java.security.cert.CertificateException;
+import java.security.interfaces.RSAPublicKey;
+import java.security.spec.InvalidKeySpecException;
+import java.text.ParseException;
+import java.util.Map;
+
+import static uk.gov.di.ipv.cri.passport.library.config.ConfigurationVariable.DCS_ENCRYPTION_CERT;
+import static uk.gov.di.ipv.cri.passport.library.config.ConfigurationVariable.DCS_SIGNING_CERT;
+import static uk.gov.di.ipv.cri.passport.library.config.ConfigurationVariable.PASSPORT_CRI_ENCRYPTION_KEY;
+import static uk.gov.di.ipv.cri.passport.library.config.ConfigurationVariable.PASSPORT_CRI_SIGNING_KEY;
+
+public class DcsCryptographyService {
+
+    private final ConfigurationService configurationService;
+<span class="fc" id="L45">    private final Gson gson = new Gson();</span>
+<span class="fc" id="L46">    private final ObjectMapper objectMapper =</span>
+<span class="fc" id="L47">            new ObjectMapper().registerModule(new JavaTimeModule());</span>
+
+<span class="fc" id="L49">    public DcsCryptographyService(ConfigurationService configurationService) {</span>
+<span class="fc" id="L50">        this.configurationService = configurationService;</span>
+<span class="fc" id="L51">    }</span>
+
+    public JWSObject preparePayload(DcsPayload passportDetails)
+            throws CertificateException, NoSuchAlgorithmException, InvalidKeySpecException,
+                    JOSEException, JsonProcessingException {
+<span class="fc" id="L56">        JWSObject signedPassportDetails =</span>
+<span class="fc" id="L57">                createJWS(objectMapper.writeValueAsString(passportDetails));</span>
+<span class="fc" id="L58">        JWEObject encryptedPassportDetails = createJWE(signedPassportDetails.serialize());</span>
+<span class="fc" id="L59">        return createJWS(encryptedPassportDetails.serialize());</span>
+    }
+
+    public DcsResponse unwrapDcsResponse(DcsSignedEncryptedResponse dcsSignedEncryptedResponse)
+            throws CertificateException, ParseException, JOSEException {
+<span class="fc" id="L64">        JWSObject outerSignedPayload = JWSObject.parse(dcsSignedEncryptedResponse.getPayload());</span>
+<span class="fc bfc" id="L65" title="All 2 branches covered.">        if (isInvalidSignature(outerSignedPayload)) {</span>
+<span class="fc" id="L66">            throw new IpvCryptoException(&quot;DCS Response Outer Signature invalid.&quot;);</span>
+        }
+<span class="fc" id="L68">        JWEObject encryptedSignedPayload =</span>
+<span class="fc" id="L69">                JWEObject.parse(outerSignedPayload.getPayload().toString());</span>
+<span class="fc" id="L70">        JWSObject decryptedSignedPayload = decrypt(encryptedSignedPayload);</span>
+<span class="fc bfc" id="L71" title="All 2 branches covered.">        if (isInvalidSignature(decryptedSignedPayload)) {</span>
+<span class="fc" id="L72">            throw new IpvCryptoException(&quot;DCS Response Inner Signature invalid.&quot;);</span>
+        }
+        try {
+<span class="fc" id="L75">            return objectMapper.readValue(</span>
+<span class="fc" id="L76">                    decryptedSignedPayload.getPayload().toString(), DcsResponse.class);</span>
+<span class="nc" id="L77">        } catch (JsonProcessingException exception) {</span>
+<span class="nc" id="L78">            throw new IpvCryptoException(</span>
+<span class="nc" id="L79">                    String.format(</span>
+<span class="nc" id="L80">                            &quot;Failed to parse decrypted DCS response: %s&quot;, exception.getMessage()));</span>
+        }
+    }
+
+    private JWSObject createJWS(String stringToSign)
+            throws NoSuchAlgorithmException, InvalidKeySpecException, JOSEException,
+                    CertificateException {
+
+<span class="fc" id="L88">        Thumbprints thumbprints = configurationService.makeThumbprints();</span>
+
+<span class="fc" id="L90">        ProtectedHeader protectedHeader =</span>
+                new ProtectedHeader(
+<span class="fc" id="L92">                        JWSAlgorithm.RS256.toString(),</span>
+<span class="fc" id="L93">                        thumbprints.getSha1Thumbprint(),</span>
+<span class="fc" id="L94">                        thumbprints.getSha256Thumbprint());</span>
+
+<span class="fc" id="L96">        String jsonHeaders = gson.toJson(protectedHeader);</span>
+
+<span class="fc" id="L98">        JWSObject jwsObject =</span>
+                new JWSObject(
+                        new JWSHeader.Builder(JWSAlgorithm.RS256)
+<span class="fc" id="L101">                                .customParams(</span>
+<span class="fc" id="L102">                                        gson.fromJson(</span>
+                                                jsonHeaders,
+<span class="fc" id="L104">                                                new TypeToken&lt;Map&lt;String, Object&gt;&gt;() {}.getType()))</span>
+<span class="fc" id="L105">                                .build(),</span>
+                        new Payload(stringToSign));
+
+<span class="fc" id="L108">        jwsObject.sign(</span>
+<span class="fc" id="L109">                new RSASSASigner(configurationService.getPrivateKey(PASSPORT_CRI_SIGNING_KEY)));</span>
+
+<span class="fc" id="L111">        return jwsObject;</span>
+    }
+
+    private JWEObject createJWE(String data) throws JOSEException, CertificateException {
+
+<span class="fc" id="L116">        var header =</span>
+                new JWEHeader.Builder(JWEAlgorithm.RSA_OAEP_256, EncryptionMethod.A128CBC_HS256)
+<span class="fc" id="L118">                        .type(new JOSEObjectType(&quot;JWE&quot;))</span>
+<span class="fc" id="L119">                        .build();</span>
+<span class="fc" id="L120">        var jwe = new JWEObject(header, new Payload(data));</span>
+
+<span class="fc" id="L122">        jwe.encrypt(</span>
+                new RSAEncrypter(
+                        (RSAPublicKey)
+                                configurationService
+<span class="fc" id="L126">                                        .getCertificate(DCS_ENCRYPTION_CERT)</span>
+<span class="fc" id="L127">                                        .getPublicKey()));</span>
+
+<span class="pc bpc" id="L129" title="1 of 2 branches missed.">        if (!jwe.getState().equals(JWEObject.State.ENCRYPTED)) {</span>
+<span class="nc" id="L130">            throw new IpvCryptoException(&quot;Something went wrong, couldn't encrypt JWE&quot;);</span>
+        }
+
+<span class="fc" id="L133">        return jwe;</span>
+    }
+
+    private boolean isInvalidSignature(JWSObject jwsObject)
+            throws CertificateException, JOSEException {
+<span class="fc" id="L138">        RSASSAVerifier rsassaVerifier =</span>
+                new RSASSAVerifier(
+                        (RSAPublicKey)
+                                configurationService
+<span class="fc" id="L142">                                        .getCertificate(DCS_SIGNING_CERT)</span>
+<span class="fc" id="L143">                                        .getPublicKey());</span>
+<span class="fc bfc" id="L144" title="All 2 branches covered.">        return !jwsObject.verify(rsassaVerifier);</span>
+    }
+
+    public JWSObject decrypt(JWEObject encrypted) {
+        try {
+<span class="fc" id="L149">            RSADecrypter rsaDecrypter =</span>
+                    new RSADecrypter(
+<span class="fc" id="L151">                            configurationService.getPrivateKey(PASSPORT_CRI_ENCRYPTION_KEY));</span>
+<span class="fc" id="L152">            encrypted.decrypt(rsaDecrypter);</span>
+
+<span class="fc" id="L154">            return JWSObject.parse(encrypted.getPayload().toString());</span>
+<span class="fc" id="L155">        } catch (ParseException</span>
+                | NoSuchAlgorithmException
+                | InvalidKeySpecException
+                | JOSEException exception) {
+<span class="fc" id="L159">            throw new IpvCryptoException(</span>
+<span class="fc" id="L160">                    String.format(&quot;Cannot Decrypt DCS Payload: %s&quot;, exception.getMessage()));</span>
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

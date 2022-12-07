@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+<meta http-equiv="x-ua-compatible" content="IE=edge"/>
+<title>Test results - TokenRequestValidatorTest</title>
+<link href="../css/base-style.css" rel="stylesheet" type="text/css"/>
+<link href="../css/style.css" rel="stylesheet" type="text/css"/>
+<script src="../js/report.js" type="text/javascript"></script>
+</head>
+<body>
+<div id="content">
+<h1>TokenRequestValidatorTest</h1>
+<div class="breadcrumbs">
+<a href="../index.html">all</a> &gt; 
+<a href="../packages/uk.gov.di.ipv.cri.passport.accesstoken.validation.html">uk.gov.di.ipv.cri.passport.accesstoken.validation</a> &gt; TokenRequestValidatorTest</div>
+<div id="summary">
+<table>
+<tr>
+<td>
+<div class="summaryGroup">
+<table>
+<tr>
+<td>
+<div class="infoBox" id="tests">
+<div class="counter">11</div>
+<p>tests</p>
+</div>
+</td>
+<td>
+<div class="infoBox" id="failures">
+<div class="counter">0</div>
+<p>failures</p>
+</div>
+</td>
+<td>
+<div class="infoBox" id="ignored">
+<div class="counter">0</div>
+<p>ignored</p>
+</div>
+</td>
+<td>
+<div class="infoBox" id="duration">
+<div class="counter">1.193s</div>
+<p>duration</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</td>
+<td>
+<div class="infoBox success" id="successRate">
+<div class="percent">100%</div>
+<p>successful</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div id="tabs">
+<ul class="tabLinks">
+<li>
+<a href="#tab0">Tests</a>
+</li>
+<li>
+<a href="#tab1">Standard output</a>
+</li>
+</ul>
+<div id="tab0" class="tab">
+<h2>Tests</h2>
+<table>
+<thead>
+<tr>
+<th>Test</th>
+<th>Duration</th>
+<th>Result</th>
+</tr>
+</thead>
+<tr>
+<td class="success">shouldFailWhenCLientJWTContainsExpiryClaimTooFarInFuture()</td>
+<td class="success">0.033s</td>
+<td class="success">passed</td>
+</tr>
+<tr>
+<td class="success">shouldNotThrowForValidJwt()</td>
+<td class="success">0.015s</td>
+<td class="success">passed</td>
+</tr>
+<tr>
+<td class="success">shouldNotThrowForValidJwtWithDerSignature()</td>
+<td class="success">0.068s</td>
+<td class="success">passed</td>
+</tr>
+<tr>
+<td class="success">shouldThrowIfClaimsSetHasExpired()</td>
+<td class="success">0.006s</td>
+<td class="success">passed</td>
+</tr>
+<tr>
+<td class="success">shouldThrowIfClaimsSetIssuerAndSubjectAreNotTheSame()</td>
+<td class="success">0.032s</td>
+<td class="success">passed</td>
+</tr>
+<tr>
+<td class="success">shouldThrowIfInvalidSignature()</td>
+<td class="success">0.017s</td>
+<td class="success">passed</td>
+</tr>
+<tr>
+<td class="success">shouldThrowIfJwtIdHasAlreadyBeenUsed()</td>
+<td class="success">0.940s</td>
+<td class="success">passed</td>
+</tr>
+<tr>
+<td class="success">shouldThrowIfMissingClientAssertionAndClientIdParams()</td>
+<td class="success">0.010s</td>
+<td class="success">passed</td>
+</tr>
+<tr>
+<td class="success">shouldThrowIfMissingClientAssertionParam()</td>
+<td class="success">0.010s</td>
+<td class="success">passed</td>
+</tr>
+<tr>
+<td class="success">shouldThrowIfMissingJwtId()</td>
+<td class="success">0.040s</td>
+<td class="success">passed</td>
+</tr>
+<tr>
+<td class="success">shouldThrowIfWrongAudience()</td>
+<td class="success">0.022s</td>
+<td class="success">passed</td>
+</tr>
+</table>
+</div>
+<div id="tab1" class="tab">
+<h2>Standard output</h2>
+<span class="code">
+<pre>{&quot;timestamp&quot;:&quot;2022-12-01T12:17:36.797+0000GMT&quot;,&quot;instant&quot;:{&quot;epochSecond&quot;:1669897056,&quot;nanoOfSecond&quot;:797902000},&quot;thread&quot;:&quot;Test worker&quot;,&quot;level&quot;:&quot;ERROR&quot;,&quot;loggerName&quot;:&quot;uk.gov.di.ipv.cri.passport.accesstoken.validation.TokenRequestValidator&quot;,&quot;message&quot;:&quot;The client auth JWT id (jti) has already been used&quot;,&quot;endOfBatch&quot;:false,&quot;loggerFqcn&quot;:&quot;org.apache.logging.slf4j.Log4jLogger&quot;,&quot;threadId&quot;:1,&quot;threadPriority&quot;:5,&quot;jti&quot;:&quot;test-jti&quot;,&quot;usedAtDateTime&quot;:&quot;2022-12-01T12:17:36.700052Z&quot;}
+{&quot;timestamp&quot;:&quot;2022-12-01T12:17:36.817+0000GMT&quot;,&quot;instant&quot;:{&quot;epochSecond&quot;:1669897056,&quot;nanoOfSecond&quot;:817521000},&quot;thread&quot;:&quot;Test worker&quot;,&quot;level&quot;:&quot;ERROR&quot;,&quot;loggerName&quot;:&quot;uk.gov.di.ipv.cri.passport.accesstoken.validation.TokenRequestValidator&quot;,&quot;message&quot;:&quot;Validation of client_assertion jwt failed&quot;,&quot;endOfBatch&quot;:false,&quot;loggerFqcn&quot;:&quot;org.apache.logging.slf4j.Log4jLogger&quot;,&quot;threadId&quot;:1,&quot;threadPriority&quot;:5}
+{&quot;timestamp&quot;:&quot;2022-12-01T12:17:36.852+0000GMT&quot;,&quot;instant&quot;:{&quot;epochSecond&quot;:1669897056,&quot;nanoOfSecond&quot;:852686000},&quot;thread&quot;:&quot;Test worker&quot;,&quot;level&quot;:&quot;ERROR&quot;,&quot;loggerName&quot;:&quot;uk.gov.di.ipv.cri.passport.accesstoken.validation.TokenRequestValidator&quot;,&quot;message&quot;:&quot;Validation of client_assertion jwt failed&quot;,&quot;endOfBatch&quot;:false,&quot;loggerFqcn&quot;:&quot;org.apache.logging.slf4j.Log4jLogger&quot;,&quot;threadId&quot;:1,&quot;threadPriority&quot;:5}
+{&quot;timestamp&quot;:&quot;2022-12-01T12:17:36.875+0000GMT&quot;,&quot;instant&quot;:{&quot;epochSecond&quot;:1669897056,&quot;nanoOfSecond&quot;:875978000},&quot;thread&quot;:&quot;Test worker&quot;,&quot;level&quot;:&quot;ERROR&quot;,&quot;loggerName&quot;:&quot;uk.gov.di.ipv.cri.passport.accesstoken.validation.TokenRequestValidator&quot;,&quot;message&quot;:&quot;Validation of client_assertion jwt failed&quot;,&quot;endOfBatch&quot;:false,&quot;loggerFqcn&quot;:&quot;org.apache.logging.slf4j.Log4jLogger&quot;,&quot;threadId&quot;:1,&quot;threadPriority&quot;:5}
+{&quot;timestamp&quot;:&quot;2022-12-01T12:17:36.885+0000GMT&quot;,&quot;instant&quot;:{&quot;epochSecond&quot;:1669897056,&quot;nanoOfSecond&quot;:885016000},&quot;thread&quot;:&quot;Test worker&quot;,&quot;level&quot;:&quot;ERROR&quot;,&quot;loggerName&quot;:&quot;uk.gov.di.ipv.cri.passport.accesstoken.validation.TokenRequestValidator&quot;,&quot;message&quot;:&quot;Validation of client_assertion jwt failed&quot;,&quot;endOfBatch&quot;:false,&quot;loggerFqcn&quot;:&quot;org.apache.logging.slf4j.Log4jLogger&quot;,&quot;threadId&quot;:1,&quot;threadPriority&quot;:5}
+{&quot;timestamp&quot;:&quot;2022-12-01T12:17:36.902+0000GMT&quot;,&quot;instant&quot;:{&quot;epochSecond&quot;:1669897056,&quot;nanoOfSecond&quot;:902975000},&quot;thread&quot;:&quot;Test worker&quot;,&quot;level&quot;:&quot;ERROR&quot;,&quot;loggerName&quot;:&quot;uk.gov.di.ipv.cri.passport.accesstoken.validation.TokenRequestValidator&quot;,&quot;message&quot;:&quot;Validation of client_assertion jwt failed&quot;,&quot;endOfBatch&quot;:false,&quot;loggerFqcn&quot;:&quot;org.apache.logging.slf4j.Log4jLogger&quot;,&quot;threadId&quot;:1,&quot;threadPriority&quot;:5}
+{&quot;timestamp&quot;:&quot;2022-12-01T12:17:36.969+0000GMT&quot;,&quot;instant&quot;:{&quot;epochSecond&quot;:1669897056,&quot;nanoOfSecond&quot;:969671000},&quot;thread&quot;:&quot;Test worker&quot;,&quot;level&quot;:&quot;INFO&quot;,&quot;loggerName&quot;:&quot;uk.gov.di.ipv.cri.passport.library.helpers.LogHelper&quot;,&quot;message&quot;:&quot;CLIENT_ID_LOG_FIELD attached to logs&quot;,&quot;endOfBatch&quot;:false,&quot;loggerFqcn&quot;:&quot;org.apache.logging.log4j.spi.AbstractLogger&quot;,&quot;threadId&quot;:1,&quot;threadPriority&quot;:5,&quot;clientId&quot;:&quot;testClientId&quot;}
+{&quot;timestamp&quot;:&quot;2022-12-01T12:17:36.990+0000GMT&quot;,&quot;instant&quot;:{&quot;epochSecond&quot;:1669897056,&quot;nanoOfSecond&quot;:990310000},&quot;thread&quot;:&quot;Test worker&quot;,&quot;level&quot;:&quot;INFO&quot;,&quot;loggerName&quot;:&quot;uk.gov.di.ipv.cri.passport.library.helpers.LogHelper&quot;,&quot;message&quot;:&quot;CLIENT_ID_LOG_FIELD attached to logs&quot;,&quot;endOfBatch&quot;:false,&quot;loggerFqcn&quot;:&quot;org.apache.logging.log4j.spi.AbstractLogger&quot;,&quot;threadId&quot;:1,&quot;threadPriority&quot;:5,&quot;clientId&quot;:&quot;testClientId&quot;}
+{&quot;timestamp&quot;:&quot;2022-12-01T12:17:37.024+0000GMT&quot;,&quot;instant&quot;:{&quot;epochSecond&quot;:1669897057,&quot;nanoOfSecond&quot;:24552000},&quot;thread&quot;:&quot;Test worker&quot;,&quot;level&quot;:&quot;ERROR&quot;,&quot;loggerName&quot;:&quot;uk.gov.di.ipv.cri.passport.accesstoken.validation.TokenRequestValidator&quot;,&quot;message&quot;:&quot;Client JWT expiry date is too far in the future&quot;,&quot;endOfBatch&quot;:false,&quot;loggerFqcn&quot;:&quot;org.apache.logging.slf4j.Log4jLogger&quot;,&quot;threadId&quot;:1,&quot;threadPriority&quot;:5,&quot;clientId&quot;:&quot;testClientId&quot;}
+{&quot;timestamp&quot;:&quot;2022-12-01T12:17:37.024+0000GMT&quot;,&quot;instant&quot;:{&quot;epochSecond&quot;:1669897057,&quot;nanoOfSecond&quot;:24971000},&quot;thread&quot;:&quot;Test worker&quot;,&quot;level&quot;:&quot;ERROR&quot;,&quot;loggerName&quot;:&quot;uk.gov.di.ipv.cri.passport.accesstoken.validation.TokenRequestValidator&quot;,&quot;message&quot;:&quot;Validation of client_assertion jwt failed&quot;,&quot;endOfBatch&quot;:false,&quot;loggerFqcn&quot;:&quot;org.apache.logging.slf4j.Log4jLogger&quot;,&quot;threadId&quot;:1,&quot;threadPriority&quot;:5,&quot;clientId&quot;:&quot;testClientId&quot;}
+{&quot;timestamp&quot;:&quot;2022-12-01T12:17:37.068+0000GMT&quot;,&quot;instant&quot;:{&quot;epochSecond&quot;:1669897057,&quot;nanoOfSecond&quot;:68800000},&quot;thread&quot;:&quot;Test worker&quot;,&quot;level&quot;:&quot;ERROR&quot;,&quot;loggerName&quot;:&quot;uk.gov.di.ipv.cri.passport.accesstoken.validation.TokenRequestValidator&quot;,&quot;message&quot;:&quot;The client auth JWT id (jti) is missing&quot;,&quot;endOfBatch&quot;:false,&quot;loggerFqcn&quot;:&quot;org.apache.logging.slf4j.Log4jLogger&quot;,&quot;threadId&quot;:1,&quot;threadPriority&quot;:5,&quot;clientId&quot;:&quot;testClientId&quot;}
+{&quot;timestamp&quot;:&quot;2022-12-01T12:17:37.069+0000GMT&quot;,&quot;instant&quot;:{&quot;epochSecond&quot;:1669897057,&quot;nanoOfSecond&quot;:69433000},&quot;thread&quot;:&quot;Test worker&quot;,&quot;level&quot;:&quot;ERROR&quot;,&quot;loggerName&quot;:&quot;uk.gov.di.ipv.cri.passport.accesstoken.validation.TokenRequestValidator&quot;,&quot;message&quot;:&quot;Validation of client_assertion jwt failed&quot;,&quot;endOfBatch&quot;:false,&quot;loggerFqcn&quot;:&quot;org.apache.logging.slf4j.Log4jLogger&quot;,&quot;threadId&quot;:1,&quot;threadPriority&quot;:5,&quot;clientId&quot;:&quot;testClientId&quot;}
+{&quot;timestamp&quot;:&quot;2022-12-01T12:17:37.101+0000GMT&quot;,&quot;instant&quot;:{&quot;epochSecond&quot;:1669897057,&quot;nanoOfSecond&quot;:101959000},&quot;thread&quot;:&quot;Test worker&quot;,&quot;level&quot;:&quot;ERROR&quot;,&quot;loggerName&quot;:&quot;uk.gov.di.ipv.cri.passport.accesstoken.validation.TokenRequestValidator&quot;,&quot;message&quot;:&quot;Validation of client_assertion jwt failed&quot;,&quot;endOfBatch&quot;:false,&quot;loggerFqcn&quot;:&quot;org.apache.logging.slf4j.Log4jLogger&quot;,&quot;threadId&quot;:1,&quot;threadPriority&quot;:5,&quot;clientId&quot;:&quot;testClientId&quot;}
+{&quot;timestamp&quot;:&quot;2022-12-01T12:17:37.113+0000GMT&quot;,&quot;instant&quot;:{&quot;epochSecond&quot;:1669897057,&quot;nanoOfSecond&quot;:113795000},&quot;thread&quot;:&quot;Test worker&quot;,&quot;level&quot;:&quot;ERROR&quot;,&quot;loggerName&quot;:&quot;uk.gov.di.ipv.cri.passport.accesstoken.validation.TokenRequestValidator&quot;,&quot;message&quot;:&quot;Validation of client_assertion jwt failed&quot;,&quot;endOfBatch&quot;:false,&quot;loggerFqcn&quot;:&quot;org.apache.logging.slf4j.Log4jLogger&quot;,&quot;threadId&quot;:1,&quot;threadPriority&quot;:5,&quot;clientId&quot;:&quot;testClientId&quot;}
+</pre>
+</span>
+</div>
+</div>
+<div id="footer">
+<p>
+<div>
+<label class="hidden" id="label-for-line-wrapping-toggle" for="line-wrapping-toggle">Wrap lines
+<input id="line-wrapping-toggle" type="checkbox" autocomplete="off"/>
+</label>
+</div>Generated by 
+<a href="http://www.gradle.org">Gradle 7.3</a> at 1 Dec 2022, 12:17:37</p>
+</div>
+</div>
+</body>
+</html>

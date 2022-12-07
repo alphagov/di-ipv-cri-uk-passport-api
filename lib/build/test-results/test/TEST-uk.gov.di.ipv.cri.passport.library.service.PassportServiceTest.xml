@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="uk.gov.di.ipv.cri.passport.library.service.PassportServiceTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2022-12-01T12:17:10" hostname="UK-WXY6WYG4WJ" time="0.779">
+  <properties/>
+  <testcase name="shouldReturnAnErrorWhenDCSRespondsWithNon200()" classname="uk.gov.di.ipv.cri.passport.library.service.PassportServiceTest" time="0.733"/>
+  <testcase name="shouldPostToDcsEndpoint()" classname="uk.gov.di.ipv.cri.passport.library.service.PassportServiceTest" time="0.02"/>
+  <testcase name="shouldReturnThrowExceptionWhenResponseFromDcsIsEmpty()" classname="uk.gov.di.ipv.cri.passport.library.service.PassportServiceTest" time="0.008"/>
+  <testcase name="shouldCreateDcsResponseInDataStore()" classname="uk.gov.di.ipv.cri.passport.library.service.PassportServiceTest" time="0.006"/>
+  <system-out><![CDATA[12:17:11.116 [Test worker] ERROR uk.gov.di.ipv.cri.passport.library.service.PassportService - Response from DCS has status code: 500
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

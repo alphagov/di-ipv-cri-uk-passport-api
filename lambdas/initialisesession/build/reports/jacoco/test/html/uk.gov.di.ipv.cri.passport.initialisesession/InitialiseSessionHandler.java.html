@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>InitialiseSessionHandler.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">initialisesession</a> &gt; <a href="index.source.html" class="el_package">uk.gov.di.ipv.cri.passport.initialisesession</a> &gt; <span class="el_source">InitialiseSessionHandler.java</span></div><h1>InitialiseSessionHandler.java</h1><pre class="source lang-java linenums"><span class="fc" id="L1">package uk.gov.di.ipv.cri.passport.initialisesession;</span>
+
+import com.amazonaws.services.lambda.runtime.Context;
+import com.amazonaws.services.lambda.runtime.RequestHandler;
+import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
+import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.nimbusds.jose.JWEObject;
+import com.nimbusds.jwt.JWTClaimsSet;
+import com.nimbusds.jwt.SignedJWT;
+import com.nimbusds.oauth2.sdk.util.StringUtils;
+import org.apache.http.HttpStatus;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import software.amazon.lambda.powertools.logging.CorrelationIdPathConstants;
+import software.amazon.lambda.powertools.logging.Logging;
+import software.amazon.lambda.powertools.metrics.Metrics;
+import uk.gov.di.ipv.cri.common.library.util.EventProbe;
+import uk.gov.di.ipv.cri.passport.library.annotations.ExcludeFromGeneratedCoverageReport;
+import uk.gov.di.ipv.cri.passport.library.auditing.AuditEventTypes;
+import uk.gov.di.ipv.cri.passport.library.auditing.AuditEventUser;
+import uk.gov.di.ipv.cri.passport.library.config.ConfigurationService;
+import uk.gov.di.ipv.cri.passport.library.domain.JarResponse;
+import uk.gov.di.ipv.cri.passport.library.error.ErrorResponse;
+import uk.gov.di.ipv.cri.passport.library.error.RedirectErrorResponse;
+import uk.gov.di.ipv.cri.passport.library.exceptions.JarValidationException;
+import uk.gov.di.ipv.cri.passport.library.exceptions.RecoverableJarValidationException;
+import uk.gov.di.ipv.cri.passport.library.exceptions.SqsException;
+import uk.gov.di.ipv.cri.passport.library.helpers.ApiGatewayResponseGenerator;
+import uk.gov.di.ipv.cri.passport.library.helpers.LogHelper;
+import uk.gov.di.ipv.cri.passport.library.helpers.RequestHelper;
+import uk.gov.di.ipv.cri.passport.library.persistence.item.PassportSessionItem;
+import uk.gov.di.ipv.cri.passport.library.service.AuditService;
+import uk.gov.di.ipv.cri.passport.library.service.KmsRsaDecrypter;
+import uk.gov.di.ipv.cri.passport.library.service.PassportSessionService;
+import uk.gov.di.ipv.cri.passport.library.validation.JarValidator;
+
+import java.text.ParseException;
+
+import static uk.gov.di.ipv.cri.passport.library.config.ConfigurationVariable.JAR_ENCRYPTION_KEY_ID;
+import static uk.gov.di.ipv.cri.passport.library.metrics.Definitions.LAMBDA_INITIALISE_SESSION_COMPLETED_ERROR;
+import static uk.gov.di.ipv.cri.passport.library.metrics.Definitions.LAMBDA_INITIALISE_SESSION_COMPLETED_OK;
+
+public class InitialiseSessionHandler
+        implements RequestHandler&lt;APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent&gt; {
+
+    private final ConfigurationService configurationService;
+    private final KmsRsaDecrypter kmsRsaDecrypter;
+    private final JarValidator jarValidator;
+    private final AuditService auditService;
+    private final PassportSessionService passportSessionService;
+
+<span class="fc" id="L52">    private static final Logger LOGGER = LogManager.getLogger();</span>
+<span class="fc" id="L53">    private static final Integer OK = 200;</span>
+<span class="fc" id="L54">    private static final Integer BAD_REQUEST = 400;</span>
+    private static final String CLIENT_ID = &quot;client_id&quot;;
+    private static final String SHARED_CLAIMS = &quot;shared_claims&quot;;
+
+    private final EventProbe eventProbe;
+
+    public InitialiseSessionHandler(
+            ConfigurationService configurationService,
+            KmsRsaDecrypter kmsRsaDecrypter,
+            JarValidator jarValidator,
+            AuditService auditService,
+            PassportSessionService passportSessionService,
+<span class="fc" id="L66">            EventProbe eventProbe) {</span>
+<span class="fc" id="L67">        this.configurationService = configurationService;</span>
+<span class="fc" id="L68">        this.kmsRsaDecrypter = kmsRsaDecrypter;</span>
+<span class="fc" id="L69">        this.jarValidator = jarValidator;</span>
+<span class="fc" id="L70">        this.auditService = auditService;</span>
+<span class="fc" id="L71">        this.passportSessionService = passportSessionService;</span>
+<span class="fc" id="L72">        this.eventProbe = eventProbe;</span>
+<span class="fc" id="L73">    }</span>
+
+    @ExcludeFromGeneratedCoverageReport
+    public InitialiseSessionHandler() {
+        this.configurationService = new ConfigurationService();
+        this.kmsRsaDecrypter =
+                new KmsRsaDecrypter(configurationService.getSsmParameter(JAR_ENCRYPTION_KEY_ID));
+        this.jarValidator = new JarValidator(kmsRsaDecrypter, configurationService);
+        this.auditService =
+                new AuditService(AuditService.getDefaultSqsClient(), configurationService);
+        this.passportSessionService = new PassportSessionService(configurationService);
+        eventProbe = new EventProbe();
+    }
+
+    @Override
+    @Logging(clearState = true, correlationIdPath = CorrelationIdPathConstants.API_GATEWAY_REST)
+    @Metrics(captureColdStart = true)
+    public APIGatewayProxyResponseEvent handleRequest(
+            APIGatewayProxyRequestEvent input, Context context) {
+<span class="pc bfc" id="L92" title="All 2 branches covered.">        LogHelper.attachComponentIdToLogs();</span>
+        try {
+            String clientId = RequestHelper.getHeaderByKey(input.getHeaders(), CLIENT_ID);
+
+            if (StringUtils.isBlank(clientId)) {
+                eventProbe.counterMetric(LAMBDA_INITIALISE_SESSION_COMPLETED_ERROR);
+                return ApiGatewayResponseGenerator.proxyJsonResponse(
+                        BAD_REQUEST, ErrorResponse.MISSING_CLIENT_ID_QUERY_PARAMETER);
+            }
+            LogHelper.attachClientIdToLogs(clientId);
+
+            if (input.getBody() == null) {
+                eventProbe.counterMetric(LAMBDA_INITIALISE_SESSION_COMPLETED_ERROR);
+                return ApiGatewayResponseGenerator.proxyJsonResponse(
+                        BAD_REQUEST, ErrorResponse.MISSING_SHARED_ATTRIBUTES_JWT);
+            }
+
+            SignedJWT signedJWT = jarValidator.decryptJWE(JWEObject.parse(input.getBody()));
+
+            JWTClaimsSet claimsSet = jarValidator.validateRequestJwt(signedJWT, clientId);
+
+            PassportSessionItem passportSessionItem =
+                    passportSessionService.generatePassportSession(claimsSet);
+
+            this.auditService.sendAuditEvent(
+                    AuditEventTypes.IPV_PASSPORT_CRI_START,
+                    AuditEventUser.fromPassportSessionItem(passportSessionItem));
+
+            JarResponse response =
+                    generateJarResponse(claimsSet, passportSessionItem.getPassportSessionId());
+
+            eventProbe.counterMetric(LAMBDA_INITIALISE_SESSION_COMPLETED_OK);
+
+            return ApiGatewayResponseGenerator.proxyJsonResponse(OK, response);
+        } catch (RecoverableJarValidationException e) {
+            LOGGER.error(&quot;JAR validation failed: {}&quot;, e.getErrorObject().getDescription());
+            RedirectErrorResponse errorResponse =
+                    new RedirectErrorResponse(
+                            e.getRedirectUri(), e.getState(), e.getErrorObject().toJSONObject());
+            eventProbe.counterMetric(LAMBDA_INITIALISE_SESSION_COMPLETED_ERROR);
+            return ApiGatewayResponseGenerator.proxyJsonResponse(
+                    e.getErrorObject().getHTTPStatusCode(), errorResponse);
+        } catch (JarValidationException e) {
+            LOGGER.error(&quot;JAR validation failed: {}&quot;, e.getErrorObject().getDescription());
+            eventProbe.counterMetric(LAMBDA_INITIALISE_SESSION_COMPLETED_ERROR);
+            return ApiGatewayResponseGenerator.proxyJsonResponse(
+                    e.getErrorObject().getHTTPStatusCode(), e.getErrorObject().toJSONObject());
+        } catch (ParseException e) {
+            LOGGER.error(&quot;Failed to parse claim set when attempting to retrieve JAR claims&quot;);
+            eventProbe.counterMetric(LAMBDA_INITIALISE_SESSION_COMPLETED_ERROR);
+            return ApiGatewayResponseGenerator.proxyJsonResponse(
+                    BAD_REQUEST, ErrorResponse.FAILED_TO_PARSE);
+        } catch (SqsException e) {
+            LOGGER.error(&quot;Failed to send audit event to SQS queue because: {}&quot;, e.getMessage());
+            eventProbe.counterMetric(LAMBDA_INITIALISE_SESSION_COMPLETED_ERROR);
+            return ApiGatewayResponseGenerator.proxyJsonResponse(
+                    HttpStatus.SC_BAD_REQUEST,
+                    ErrorResponse.FAILED_TO_SEND_AUDIT_MESSAGE_TO_SQS_QUEUE);
+        }
+    }
+
+    private JarResponse generateJarResponse(JWTClaimsSet claimsSet, String passportSessionId)
+            throws ParseException {
+<span class="fc" id="L155">        return new JarResponse(claimsSet.getJSONObjectClaim(SHARED_CLAIMS), passportSessionId);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Definitions.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">lib</a> &gt; <a href="index.source.html" class="el_package">uk.gov.di.ipv.cri.passport.library.metrics</a> &gt; <span class="el_source">Definitions.java</span></div><h1>Definitions.java</h1><pre class="source lang-java linenums">package uk.gov.di.ipv.cri.passport.library.metrics;
+
+public class Definitions {
+
+    // These completed metrics record all escape routes from the lambdas.
+    // OK for expected routes with ERROR being all others
+    public static final String LAMBDA_INITIALISE_SESSION_COMPLETED_OK =
+            &quot;lambda_initialise_session_completed_ok&quot;;
+    public static final String LAMBDA_INITIALISE_SESSION_COMPLETED_ERROR =
+            &quot;lambda_initialise_session_completed_error&quot;;
+
+    public static final String LAMBDA_CHECK_PASSPORT_COMPLETED_OK =
+            &quot;lambda_check_passport_completed_ok&quot;;
+    public static final String LAMBDA_CHECK_PASSPORT_COMPLETED_ERROR =
+            &quot;lambda_check_passport_completed_error&quot;;
+
+    public static final String LAMBDA_BUILD_CLIENT_OAUTH_RESPONSE_COMPLETED_OK =
+            &quot;lambda_build_client_oauth_response_completed_ok&quot;;
+    public static final String LAMBDA_BUILD_CLIENT_OAUTH_RESPONSE_COMPLETED_ERROR =
+            &quot;lambda_build_client_oauth_response_completed_error&quot;;
+
+    public static final String LAMBDA_ACCESS_TOKEN_COMPLETED_OK =
+            &quot;lambda_access_token_completed_ok&quot;;
+    public static final String LAMBDA_ACCESS_TOKEN_COMPLETED_ERROR =
+            &quot;lambda_access_token_completed_error&quot;;
+
+    public static final String LAMBDA_ISSUE_CREDENTIAL_COMPLETED_OK =
+            &quot;lambda_issue_credential_completed_ok&quot;;
+    public static final String LAMBDA_ISSUE_CREDENTIAL_COMPLETED_ERROR =
+            &quot;lambda_issue_credential_completed_error&quot;;
+
+    // Document Status after an attempt
+    public static final String LAMBDA_CHECK_PASSPORT_ATTEMPT_STATUS_VERIFIED_PREFIX =
+            &quot;lambda_check_passport_attempt_status_verified_&quot;; // Attempt count appended
+    public static final String LAMBDA_CHECK_PASSPORT_ATTEMPT_STATUS_RETRY =
+            &quot;lambda_check_passport_attempt_status_retry&quot;;
+    public static final String LAMBDA_CHECK_PASSPORT_ATTEMPT_STATUS_UNVERIFIED =
+            &quot;lambda_check_passport_attempt_status_unverified&quot;;
+
+    // FormDataParse
+    public static final String FORM_DATA_PARSE_PASS = &quot;form_data_parse_pass&quot;;
+    public static final String FORM_DATA_PARSE_FAIL = &quot;form_data_parse_fail&quot;;
+
+    // DCS
+    public static final String DCS_CHECK_REQUEST_SUCCEEDED = &quot;dcs_check_request_succeeded&quot;;
+    public static final String DCS_CHECK_REQUEST_FAILED = &quot;dcs_check_request_failed&quot;;
+
+    public static final String PASSPORT_CI_PREFIX = &quot;passport_ci_&quot;;
+
+    // Third Party Response Type DCS
+    public static final String THIRD_PARTY_DCS_RESPONSE_OK = &quot;third_party_dcs_response_ok&quot;;
+    public static final String THIRD_PARTY_DCS_RESPONSE_TYPE_ERROR =
+            &quot;third_party_dcs_response_type_error&quot;;
+    public static final String THIRD_PARTY_DCS_RESPONSE_TYPE_EMPTY =
+            &quot;third_party_dcs_response_type_empty&quot;;
+
+<span class="nc" id="L57">    private Definitions() {</span>
+<span class="nc" id="L58">        throw new IllegalStateException(&quot;Instantiation is not valid for this class.&quot;);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

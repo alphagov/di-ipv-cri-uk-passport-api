@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+<meta http-equiv="x-ua-compatible" content="IE=edge"/>
+<title>Test results - JarValidatorTest</title>
+<link href="../css/base-style.css" rel="stylesheet" type="text/css"/>
+<link href="../css/style.css" rel="stylesheet" type="text/css"/>
+<script src="../js/report.js" type="text/javascript"></script>
+</head>
+<body>
+<div id="content">
+<h1>JarValidatorTest</h1>
+<div class="breadcrumbs">
+<a href="../index.html">all</a> &gt; 
+<a href="../packages/uk.gov.di.ipv.cri.passport.library.validation.html">uk.gov.di.ipv.cri.passport.library.validation</a> &gt; JarValidatorTest</div>
+<div id="summary">
+<table>
+<tr>
+<td>
+<div class="summaryGroup">
+<table>
+<tr>
+<td>
+<div class="infoBox" id="tests">
+<div class="counter">18</div>
+<p>tests</p>
+</div>
+</td>
+<td>
+<div class="infoBox" id="failures">
+<div class="counter">0</div>
+<p>failures</p>
+</div>
+</td>
+<td>
+<div class="infoBox" id="ignored">
+<div class="counter">0</div>
+<p>ignored</p>
+</div>
+</td>
+<td>
+<div class="infoBox" id="duration">
+<div class="counter">0.391s</div>
+<p>duration</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</td>
+<td>
+<div class="infoBox success" id="successRate">
+<div class="percent">100%</div>
+<p>successful</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div id="tabs">
+<ul class="tabLinks">
+<li>
+<a href="#tab0">Tests</a>
+</li>
+<li>
+<a href="#tab1">Standard output</a>
+</li>
+</ul>
+<div id="tab0" class="tab">
+<h2>Tests</h2>
+<table>
+<thead>
+<tr>
+<th>Test</th>
+<th>Duration</th>
+<th>Result</th>
+</tr>
+</thead>
+<tr>
+<td class="success">shouldFailValidationChecksIfClientIdNotString()</td>
+<td class="success">0.006s</td>
+<td class="success">passed</td>
+</tr>
+<tr>
+<td class="success">shouldFailValidationChecksOnExpiredJWTWithRecoverableError()</td>
+<td class="success">0.038s</td>
+<td class="success">passed</td>
+</tr>
+<tr>
+<td class="success">shouldFailValidationChecksOnExpiryClaimTooFarInFutureWithRecoverableError()</td>
+<td class="success">0.014s</td>
+<td class="success">passed</td>
+</tr>
+<tr>
+<td class="success">shouldFailValidationChecksOnFutureNbfClaimWithRecoverableError()</td>
+<td class="success">0.009s</td>
+<td class="success">passed</td>
+</tr>
+<tr>
+<td class="success">shouldFailValidationChecksOnInvalidAudienceClaimWithRecoverableError()</td>
+<td class="success">0.009s</td>
+<td class="success">passed</td>
+</tr>
+<tr>
+<td class="success">shouldFailValidationChecksOnInvalidClientId()</td>
+<td class="success">0.015s</td>
+<td class="success">passed</td>
+</tr>
+<tr>
+<td class="success">shouldFailValidationChecksOnInvalidIssuerClaimWithRecoverableError()</td>
+<td class="success">0.019s</td>
+<td class="success">passed</td>
+</tr>
+<tr>
+<td class="success">shouldFailValidationChecksOnInvalidJWTSignature()</td>
+<td class="success">0.013s</td>
+<td class="success">passed</td>
+</tr>
+<tr>
+<td class="success">shouldFailValidationChecksOnInvalidPublicJwk()</td>
+<td class="success">0.008s</td>
+<td class="success">passed</td>
+</tr>
+<tr>
+<td class="success">shouldFailValidationChecksOnInvalidRedirectUriClaim()</td>
+<td class="success">0.007s</td>
+<td class="success">passed</td>
+</tr>
+<tr>
+<td class="success">shouldFailValidationChecksOnInvalidResponseTypeClaimWithRecoverableError()</td>
+<td class="success">0.138s</td>
+<td class="success">passed</td>
+</tr>
+<tr>
+<td class="success">shouldFailValidationChecksOnMisMatchingClientIds()</td>
+<td class="success">0.008s</td>
+<td class="success">passed</td>
+</tr>
+<tr>
+<td class="success">shouldFailValidationChecksOnMissingRequiredClaimWithRecoverableError()</td>
+<td class="success">0.015s</td>
+<td class="success">passed</td>
+</tr>
+<tr>
+<td class="success">shouldFailValidationChecksOnParseFailureOfRedirectUri()</td>
+<td class="success">0.021s</td>
+<td class="success">passed</td>
+</tr>
+<tr>
+<td class="success">shouldFailValidationChecksOnValidJWTalgHeader()</td>
+<td class="success">0.022s</td>
+<td class="success">passed</td>
+</tr>
+<tr>
+<td class="success">shouldPassValidationChecksOnValidJARRequest()</td>
+<td class="success">0.030s</td>
+<td class="success">passed</td>
+</tr>
+<tr>
+<td class="success">shouldReturnSignedJwtOnSuccessfulDecryption()</td>
+<td class="success">0.016s</td>
+<td class="success">passed</td>
+</tr>
+<tr>
+<td class="success">shouldThrowExceptionIfDecryptionFails()</td>
+<td class="success">0.003s</td>
+<td class="success">passed</td>
+</tr>
+</table>
+</div>
+<div id="tab1" class="tab">
+<h2>Standard output</h2>
+<span class="code">
+<pre>12:17:11.350 [Test worker] ERROR uk.gov.di.ipv.cri.passport.library.validation.JarValidator - Claim set validation failed
+12:17:11.375 [Test worker] ERROR uk.gov.di.ipv.cri.passport.library.validation.JarValidator - jwt signing algorithm RS256 does not match expected signing algorithm ES256
+12:17:11.401 [Test worker] ERROR uk.gov.di.ipv.cri.passport.library.validation.JarValidator - Failed to parse JWT claim set in order to access to the redirect_uri claim
+12:17:11.459 [Test worker] ERROR uk.gov.di.ipv.cri.passport.library.validation.JarValidator - Claim set validation failed
+12:17:11.512 [Test worker] ERROR uk.gov.di.ipv.cri.passport.library.validation.JarValidator - Client JWT expiry date is too far in the future
+12:17:11.528 [Test worker] ERROR uk.gov.di.ipv.cri.passport.library.validation.JarValidator - Claim set validation failed
+12:17:11.548 [Test worker] ERROR uk.gov.di.ipv.cri.passport.library.validation.JarValidator - Claim set validation failed
+12:17:11.556 [Test worker] ERROR uk.gov.di.ipv.cri.passport.library.validation.JarValidator - Query param client ID does not match JAR request object client ID
+12:17:11.566 [Test worker] ERROR uk.gov.di.ipv.cri.passport.library.validation.JarValidator - Claim set validation failed
+12:17:11.580 [Test worker] ERROR uk.gov.di.ipv.cri.passport.library.validation.JarValidator - Unknown client id provided test-client-id
+12:17:11.587 [Test worker] ERROR uk.gov.di.ipv.cri.passport.library.validation.JarValidator - Failed to decrypt the JWE
+12:17:11.597 [Test worker] ERROR uk.gov.di.ipv.cri.passport.library.validation.JarValidator - Claim set validation failed
+12:17:11.615 [Test worker] ERROR uk.gov.di.ipv.cri.passport.library.validation.JarValidator - JWT signature validation failed
+12:17:11.626 [Test worker] ERROR uk.gov.di.ipv.cri.passport.library.validation.JarValidator - Invalid redirect_uri claim (https://example.com) provided for client: test-client-id
+12:17:11.632 [Test worker] ERROR uk.gov.di.ipv.cri.passport.library.validation.JarValidator - client_id not found in claims set: 'The client_id claim is not a String'
+12:17:11.640 [Test worker] ERROR uk.gov.di.ipv.cri.passport.library.validation.JarValidator - Failed to parse JWT when attempting signature validation
+</pre>
+</span>
+</div>
+</div>
+<div id="footer">
+<p>
+<div>
+<label class="hidden" id="label-for-line-wrapping-toggle" for="line-wrapping-toggle">Wrap lines
+<input id="line-wrapping-toggle" type="checkbox" autocomplete="off"/>
+</label>
+</div>Generated by 
+<a href="http://www.gradle.org">Gradle 7.3</a> at 1 Dec 2022, 12:17:12</p>
+</div>
+</div>
+</body>
+</html>
